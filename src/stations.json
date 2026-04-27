@@ -1,0 +1,390 @@
+{
+  "56": {
+    "zh": "博覽館",
+    "en": "AsiaWorld-Expo"
+  },
+  "47": {
+    "zh": "機場",
+    "en": "Airport"
+  },
+  "42": {
+    "zh": "青衣",
+    "en": "Tsing Yi"
+  },
+  "40": {
+    "zh": "九龍",
+    "en": "Kowloon"
+  },
+  "39": {
+    "zh": "香港",
+    "en": "Hong Kong"
+  },
+  "54": {
+    "zh": "欣澳",
+    "en": "Sunny Bay"
+  },
+  "55": {
+    "zh": "迪士尼",
+    "en": "Disneyland Resort"
+  },
+  "76": {
+    "zh": "羅湖",
+    "en": "Lo Wu"
+  },
+  "75": {
+    "zh": "上水",
+    "en": "Sheung Shui"
+  },
+  "74": {
+    "zh": "粉嶺",
+    "en": "Fanling"
+  },
+  "73": {
+    "zh": "太和",
+    "en": "Tai Wo"
+  },
+  "72": {
+    "zh": "大埔墟",
+    "en": "Tai Po Market"
+  },
+  "71": {
+    "zh": "大學",
+    "en": "University"
+  },
+  "69": {
+    "zh": "火炭",
+    "en": "Fo Tan"
+  },
+  "68": {
+    "zh": "沙田",
+    "en": "Sha Tin"
+  },
+  "67": {
+    "zh": "大圍",
+    "en": "Tai Wai"
+  },
+  "8": {
+    "zh": "九龍塘",
+    "en": "Kowloon Tong"
+  },
+  "65": {
+    "zh": "旺角東",
+    "en": "Mong Kok East"
+  },
+  "64": {
+    "zh": "紅磡",
+    "en": "Hung Hom"
+  },
+  "94": {
+    "zh": "會展",
+    "en": "Exhibition Centre"
+  },
+  "2": {
+    "zh": "金鐘",
+    "en": "Admiralty"
+  },
+  "78": {
+    "zh": "落馬洲",
+    "en": "Lok Ma Chau"
+  },
+  "37": {
+    "zh": "柴灣",
+    "en": "Chai Wan"
+  },
+  "36": {
+    "zh": "杏花邨",
+    "en": "Heng Fa Chuen"
+  },
+  "35": {
+    "zh": "筲箕灣",
+    "en": "Shau Kei Wan"
+  },
+  "34": {
+    "zh": "西灣河",
+    "en": "Sai Wan Ho"
+  },
+  "33": {
+    "zh": "太古",
+    "en": "Tai Koo"
+  },
+  "32": {
+    "zh": "鰂魚涌",
+    "en": "Quarry Bay"
+  },
+  "31": {
+    "zh": "北角",
+    "en": "North Point"
+  },
+  "30": {
+    "zh": "炮台山",
+    "en": "Fortress Hill"
+  },
+  "29": {
+    "zh": "天后",
+    "en": "Tin Hau"
+  },
+  "28": {
+    "zh": "銅鑼灣",
+    "en": "Causeway Bay"
+  },
+  "27": {
+    "zh": "灣仔",
+    "en": "Wan Chai"
+  },
+  "1": {
+    "zh": "中環",
+    "en": "Central"
+  },
+  "26": {
+    "zh": "上環",
+    "en": "Sheung Wan"
+  },
+  "81": {
+    "zh": "西營盤",
+    "en": "Sai Ying Pun"
+  },
+  "82": {
+    "zh": "香港大學",
+    "en": "HKU"
+  },
+  "83": {
+    "zh": "堅尼地城",
+    "en": "Kennedy Town"
+  },
+  "49": {
+    "zh": "調景嶺",
+    "en": "Tiu Keng Leng"
+  },
+  "48": {
+    "zh": "油塘",
+    "en": "Yau Tong"
+  },
+  "38": {
+    "zh": "藍田",
+    "en": "Lam Tin"
+  },
+  "15": {
+    "zh": "觀塘",
+    "en": "Kwun Tong"
+  },
+  "14": {
+    "zh": "牛頭角",
+    "en": "Ngau Tau Kok"
+  },
+  "13": {
+    "zh": "九龍灣",
+    "en": "Kowloon Bay"
+  },
+  "12": {
+    "zh": "彩虹",
+    "en": "Choi Hung"
+  },
+  "11": {
+    "zh": "鑽石山",
+    "en": "Diamond Hill"
+  },
+  "10": {
+    "zh": "黃大仙",
+    "en": "Wong Tai Sin"
+  },
+  "9": {
+    "zh": "樂富",
+    "en": "Lok Fu"
+  },
+  "7": {
+    "zh": "石硤尾",
+    "en": "Shek Kip Mei"
+  },
+  "16": {
+    "zh": "太子",
+    "en": "Prince Edward"
+  },
+  "6": {
+    "zh": "旺角",
+    "en": "Mong Kok"
+  },
+  "5": {
+    "zh": "油麻地",
+    "en": "Yau Ma Tei"
+  },
+  "84": {
+    "zh": "何文田",
+    "en": "Ho Man Tin"
+  },
+  "85": {
+    "zh": "黃埔",
+    "en": "Whampoa"
+  },
+  "103": {
+    "zh": "烏溪沙",
+    "en": "Wu Kai Sha"
+  },
+  "102": {
+    "zh": "馬鞍山",
+    "en": "Ma On Shan"
+  },
+  "101": {
+    "zh": "恆安",
+    "en": "Heng On"
+  },
+  "100": {
+    "zh": "大水坑",
+    "en": "Tai Shui Hang"
+  },
+  "99": {
+    "zh": "石門",
+    "en": "Shek Mun"
+  },
+  "98": {
+    "zh": "第一城",
+    "en": "City One"
+  },
+  "97": {
+    "zh": "沙田圍",
+    "en": "Sha Tin Wai"
+  },
+  "96": {
+    "zh": "車公廟",
+    "en": "Che Kung Temple"
+  },
+  "90": {
+    "zh": "顯徑",
+    "en": "Hin Keng"
+  },
+  "91": {
+    "zh": "啟德",
+    "en": "Kai Tak"
+  },
+  "92": {
+    "zh": "宋皇臺",
+    "en": "Sung Wong Toi"
+  },
+  "93": {
+    "zh": "土瓜灣",
+    "en": "To Kwa Wan"
+  },
+  "80": {
+    "zh": "尖東",
+    "en": "East Tsim Sha Tsui"
+  },
+  "111": {
+    "zh": "柯士甸",
+    "en": "Austin"
+  },
+  "53": {
+    "zh": "南昌",
+    "en": "Nam Cheong"
+  },
+  "20": {
+    "zh": "美孚",
+    "en": "Mei Foo"
+  },
+  "114": {
+    "zh": "荃灣西",
+    "en": "Tsuen Wan West"
+  },
+  "115": {
+    "zh": "錦上路",
+    "en": "Kam Sheung Road"
+  },
+  "116": {
+    "zh": "元朗",
+    "en": "Yuen Long"
+  },
+  "117": {
+    "zh": "朗屏",
+    "en": "Long Ping"
+  },
+  "118": {
+    "zh": "天水圍",
+    "en": "Tin Shui Wai"
+  },
+  "119": {
+    "zh": "兆康",
+    "en": "Siu Hong"
+  },
+  "120": {
+    "zh": "屯門",
+    "en": "Tuen Mun"
+  },
+  "43": {
+    "zh": "東涌",
+    "en": "Tung Chung"
+  },
+  "21": {
+    "zh": "茘景",
+    "en": "Lai King"
+  },
+  "41": {
+    "zh": "奧運",
+    "en": "Olympic"
+  },
+  "52": {
+    "zh": "寶琳",
+    "en": "Po Lam"
+  },
+  "51": {
+    "zh": "坑口",
+    "en": "Hang Hau"
+  },
+  "50": {
+    "zh": "將軍澳",
+    "en": "Tseung Kwan O"
+  },
+  "57": {
+    "zh": "康城",
+    "en": "LOHAS Park"
+  },
+  "25": {
+    "zh": "荃灣",
+    "en": "Tsuen Wan"
+  },
+  "24": {
+    "zh": "大窩口",
+    "en": "Tai Wo Hau"
+  },
+  "23": {
+    "zh": "葵興",
+    "en": "Kwai Hing"
+  },
+  "22": {
+    "zh": "葵芳",
+    "en": "Kwai Fong"
+  },
+  "19": {
+    "zh": "茘枝角",
+    "en": "Lai Chi Kok"
+  },
+  "18": {
+    "zh": "長沙灣",
+    "en": "Cheung Sha Wan"
+  },
+  "17": {
+    "zh": "深水埗",
+    "en": "Sham Shui Po"
+  },
+  "4": {
+    "zh": "佐敦",
+    "en": "Jordan"
+  },
+  "3": {
+    "zh": "尖沙咀",
+    "en": "Tsim Sha Tsui"
+  },
+  "86": {
+    "zh": "海洋公園",
+    "en": "Ocean Park"
+  },
+  "87": {
+    "zh": "黃竹坑",
+    "en": "Wong Chuk Hang"
+  },
+  "88": {
+    "zh": "利東",
+    "en": "Lei Tung"
+  },
+  "89": {
+    "zh": "海怡半島",
+    "en": "South Horizons"
+  }
+}
