@@ -93,7 +93,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
   };
 
   return (
-    <Popup className="station-popup" maxWidth={420} minWidth={340}>
+    <Popup className="station-popup" maxWidth={430} minWidth={320}>
       <div className="popup-content">
         {/* Station header */}
         <div className="popup-header">

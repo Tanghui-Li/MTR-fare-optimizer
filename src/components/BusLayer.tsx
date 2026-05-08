@@ -1,33 +1,31 @@
 import { useEffect, useState, useCallback } from 'react';
-import { CircleMarker, Tooltip, useMap } from 'react-leaflet';
+import { CircleMarker, useMap, Popup } from 'react-leaflet';
 import { fetchMtrBusSchedule } from '../services/mtrApi';
 import { mtrBusRoutes } from '../data/lineColors';
 import busStopNamesData from '../data/busStopNames.json';
 
 const busStopNames = busStopNamesData as Record<string, { zh: string; en: string }>;
 
-interface LiveBus {
+interface BusVehicle {
   busId: string;
   route: string;
   lat: number;
   lng: number;
-  departureTimeText: string;
+  nextStopName: string;
+  timeText: string;
   isDelayed: boolean;
-  stopName: string;      // Nearest bus stop name (Chinese)
-  stopNameEn: string;    // Nearest bus stop name (English)
+  remark: string;
+  arrivalTimeInSecond: number;
 }
 
 export default function BusLayer() {
-  const [buses, setBuses] = useState<LiveBus[]>([]);
+  const [vehicles, setVehicles] = useState<BusVehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const map = useMap();
 
   const fetchAllBuses = useCallback(async () => {
     setLoading(true);
-    const allBuses: LiveBus[] = [];
-    const seenBusIds = new Set<string>();
-
-    // Only fetch routes visible in the current viewport to reduce API calls
+    const vehicleMap = new Map<string, BusVehicle>();
     const bounds = map.getBounds();
 
     const fetchPromises = mtrBusRoutes.map(async (route) => {
@@ -38,34 +36,39 @@ export default function BusLayer() {
             const stopId = stop.busStopId || '';
             const stopInfo = busStopNames[stopId];
             const stopName = stopInfo?.zh || stopId;
-            const stopNameEn = stopInfo?.en || '';
-
+            
             for (const bus of stop.bus || []) {
               if (
                 bus.busLocation &&
                 bus.busLocation.latitude !== 0 &&
                 bus.busLocation.longitude !== 0
               ) {
-                const busKey = `${bus.busId}-${route}`;
-                if (!seenBusIds.has(busKey)) {
-                  seenBusIds.add(busKey);
-                  const lat = bus.busLocation.latitude;
-                  const lng = bus.busLocation.longitude;
-                  if (
-                    lat >= bounds.getSouth() - 0.1 &&
-                    lat <= bounds.getNorth() + 0.1 &&
-                    lng >= bounds.getWest() - 0.1 &&
-                    lng <= bounds.getEast() + 0.1
-                  ) {
-                    allBuses.push({
-                      busId: bus.busId,
+                const busId = bus.busId;
+                const arrivalSeconds = parseInt(bus.arrivalTimeInSecond) || 999999;
+                
+                const lat = bus.busLocation.latitude;
+                const lng = bus.busLocation.longitude;
+
+                // Only process if in view
+                if (
+                  lat >= bounds.getSouth() - 0.1 &&
+                  lat <= bounds.getNorth() + 0.1 &&
+                  lng >= bounds.getWest() - 0.1 &&
+                  lng <= bounds.getEast() + 0.1
+                ) {
+                  // If we've seen this bus before, only update if this stop is EARLIER (the real next stop)
+                  const existing = vehicleMap.get(busId);
+                  if (!existing || arrivalSeconds < existing.arrivalTimeInSecond) {
+                    vehicleMap.set(busId, {
+                      busId,
                       route,
                       lat,
                       lng,
-                      departureTimeText: bus.departureTimeText || '',
+                      nextStopName: stopName,
+                      timeText: bus.departureTimeText || '行駛中',
                       isDelayed: bus.isDelayed === '1',
-                      stopName,
-                      stopNameEn,
+                      remark: bus.busRemark || '',
+                      arrivalTimeInSecond: arrivalSeconds
                     });
                   }
                 }
@@ -79,7 +82,7 @@ export default function BusLayer() {
     });
 
     await Promise.all(fetchPromises);
-    setBuses(allBuses);
+    setVehicles(Array.from(vehicleMap.values()));
     setLoading(false);
   }, [map]);
 
@@ -91,39 +94,47 @@ export default function BusLayer() {
 
   return (
     <>
-      {buses.map((bus) => (
+      {vehicles.map((v) => (
         <CircleMarker
-          key={`${bus.busId}-${bus.route}-${bus.lat}-${bus.lng}`}
-          center={[bus.lat, bus.lng]}
+          key={`${v.busId}-${v.route}`}
+          center={[v.lat, v.lng]}
           radius={5}
           pathOptions={{
             color: '#fff',
-            fillColor: bus.isDelayed ? '#ef4444' : '#f59e0b',
+            fillColor: v.isDelayed ? '#ef4444' : '#f59e0b',
             fillOpacity: 0.9,
             weight: 1.5,
           }}
         >
-          <Tooltip
-            direction="top"
-            offset={[0, -8]}
-            className="bus-tooltip"
-          >
-            <div className="bus-tooltip-content">
-              <div className="bus-tooltip-header">
-                <span className="bus-route-badge">{bus.route}</span>
-                <span className="bus-stop-name">{bus.stopName}</span>
+          <Popup className="bus-popup" minWidth={280} maxWidth={280}>
+            <div className="bus-popup-content">
+              <div className="bus-popup-header">
+                <span className="bus-route-badge">{v.route}</span>
+                <span className="bus-id-tag">车辆编号 #{v.busId}</span>
               </div>
-              {bus.stopNameEn && (
-                <div className="bus-stop-name-en">{bus.stopNameEn}</div>
-              )}
-              <div className="bus-tooltip-eta">
-                {bus.departureTimeText || '行駛中'}
+              
+              <div className="bus-eta-list">
+                <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
+                  <div className="bus-eta-main">
+                    <span className="bus-dest">
+                      {v.remark && v.remark.trim() 
+                        ? (v.remark.includes('往') ? v.remark : `往 ${v.remark}`)
+                        : '正在前往終點站'}
+                    </span>
+                  </div>
+                  <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
+                    <span className="bus-next-stop-label">下一站：</span>
+                    <span className="bus-stop-name-highlight">{v.nextStopName}</span>
+                  </div>
+                  <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
+                    <span className={`bus-eta-time ${v.isDelayed ? 'delayed' : ''}`}>
+                      预计 {v.timeText} 到达
+                    </span>
+                  </div>
+                </div>
               </div>
-              {bus.isDelayed && (
-                <div className="bus-tooltip-delayed">⚠ 延誤</div>
-              )}
             </div>
-          </Tooltip>
+          </Popup>
         </CircleMarker>
       ))}
     </>

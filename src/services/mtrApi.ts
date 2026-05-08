@@ -174,3 +174,39 @@ export function getStationLines(
   }
   return result;
 }
+
+// ==================== Light Rail ====================
+
+export interface LrtNextTrain {
+  arrival_departure: string; 
+  dest_en: string;
+  dest_ch: string;
+  time_en: string;
+  time_ch: string;
+  route_no: string;
+  train_length: number;
+}
+
+export interface LrtPlatform {
+  platform_id: number;
+  route_list: LrtNextTrain[];
+}
+
+export interface LrtScheduleResponse {
+  status: number;
+  system_time: string;
+  platform_list: LrtPlatform[];
+}
+
+/**
+ * 获取轻铁实时到站信息
+ * API: GET https://rt.data.gov.hk/v1/transport/mtr/lrt/getSchedule?station_id={id}
+ */
+export async function fetchLrtSchedule(
+  stationId: string | number,
+): Promise<LrtScheduleResponse> {
+  const url = `https://rt.data.gov.hk/v1/transport/mtr/lrt/getSchedule?station_id=${stationId}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`LRT API error: ${resp.status}`);
+  return resp.json();
+}

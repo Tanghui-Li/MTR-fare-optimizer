@@ -12,7 +12,7 @@ export const lineColors: Record<string, string> = {
   TCL: '#F7943E',  // 東涌綫 Tung Chung Line - Orange
   TKL: '#7E3C93',  // 將軍澳綫 Tseung Kwan O Line - Purple
   TWL: '#E2231A',  // 荃灣綫 Tsuen Wan Line - Red
-  SIL: '#CBD300',  // 南島綫 South Island Line - Lime
+  SIL: '#CBD300',  // 南港島綫 South Island Line - Lime
 };
 
 /**
@@ -28,7 +28,7 @@ export const lineNames: Record<string, { zh: string; en: string }> = {
   TCL: { zh: '東涌綫', en: 'Tung Chung Line' },
   TKL: { zh: '將軍澳綫', en: 'Tseung Kwan O Line' },
   TWL: { zh: '荃灣綫', en: 'Tsuen Wan Line' },
-  SIL: { zh: '南島綫', en: 'South Island Line' },
+  SIL: { zh: '南港島綫', en: 'South Island Line' },
 };
 
 /**

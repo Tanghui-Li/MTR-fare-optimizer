@@ -49,7 +49,7 @@ export const stationCoordinates: Record<string, { lat: number; lng: number }> = 
   "17": { lat: 22.3306, lng: 114.1628 },  // Sham Shui Po 深水埗
   "18": { lat: 22.3363, lng: 114.1561 },  // Cheung Sha Wan 長沙灣
   "19": { lat: 22.3372, lng: 114.1483 },  // Lai Chi Kok 茘枝角
-  "20": { lat: 22.3386, lng: 114.1406 },  // Mei Foo 美孚
+  "20": { lat: 22.3375, lng: 114.1375 },  // Mei Foo 美孚
   "21": { lat: 22.3484, lng: 114.1261 },  // Lai King 茘景
   "22": { lat: 22.3572, lng: 114.1279 },  // Kwai Fong 葵芳
   "23": { lat: 22.3632, lng: 114.1312 },  // Kwai Hing 葵興

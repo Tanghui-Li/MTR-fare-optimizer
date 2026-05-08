@@ -1,0 +1,218 @@
+{
+  "蝴蝶": {
+    "lat": 22.378359,
+    "lng": 113.961955,
+    "zh": "輕鐵蝴蝶站",
+    "en": "LR Butterfly Stop"
+  },
+  "車廠": {
+    "lat": 22.382203,
+    "lng": 113.96359,
+    "zh": "輕鐵車廠站",
+    "en": "Light Rail Depot Stop"
+  },
+  "龍門": {
+    "lat": 22.385399,
+    "lng": 113.965222,
+    "zh": "輕鐵龍門站",
+    "en": "LR Lung Mun Stop"
+  },
+  "青雲": {
+    "lat": 22.393627,
+    "lng": 113.96752,
+    "zh": "輕鐵青雲站",
+    "en": "LR Tsing Wun Stop"
+  },
+  "建安": {
+    "lat": 22.394699,
+    "lng": 113.970762,
+    "zh": "輕鐵建安站",
+    "en": "LR Kin On Stop"
+  },
+  "三聖": {
+    "lat": 22.382769,
+    "lng": 113.976256,
+    "zh": "輕鐵三聖站",
+    "en": "LR Sam Shing Stop"
+  },
+  "市中心": {
+    "lat": 22.392096,
+    "lng": 113.97512,
+    "zh": "輕鐵市中心站",
+    "en": "LR Town Centre Stop"
+  },
+  "屯門": {
+    "lat": 22.393937,
+    "lng": 113.973896,
+    "zh": "輕鐵屯門站",
+    "en": "LR Tuen Mun Stop"
+  },
+  "港鐵兆康 (南) (兆康)": {
+    "lat": 22.410378,
+    "lng": 113.978607,
+    "zh": "港鐵兆康站 (南) (輕鐵兆康站)",
+    "en": "MTR Siu Hong Station (South) (LR Siu Hong Stop)"
+  },
+  "屯門市中心 (市中心)": {
+    "lat": 22.39153,
+    "lng": 113.9755,
+    "zh": "屯門市中心 (輕鐵市中心站)",
+    "en": "Tuen Mun Town Centre (LR Town Centre Stop)"
+  },
+  "恆福花園 (三聖)": {
+    "lat": 22.382079,
+    "lng": 113.977158,
+    "zh": "恆福花園 (輕鐵三聖站)",
+    "en": "Hanford Garden (LR Sam Shing Stop)"
+  },
+  "港鐵屯門 (屯門)": {
+    "lat": 22.395021,
+    "lng": 113.974444,
+    "zh": "港鐵屯門站 (輕鐵屯門站)",
+    "en": "MTR Tuen Mun Station (LR Tuen Mun Stop)"
+  },
+  "鳳地": {
+    "lat": 22.407254,
+    "lng": 113.978641,
+    "zh": "輕鐵鳳地站",
+    "en": "LR Fung Tei Stop"
+  },
+  "屯門 (港鐵屯門)": {
+    "lat": 22.39395,
+    "lng": 113.9737,
+    "zh": "輕鐵屯門站 (港鐵屯門站)",
+    "en": "LR Tuen Mun Stop (MTR Tuen Mun Station)"
+  },
+  "屯門 (屯門)": {
+    "lat": 22.394225,
+    "lng": 113.973358,
+    "zh": "屯門站 (輕鐵屯門站)",
+    "en": "Tuen Mun Station (LR Tuen Mun Stop)"
+  },
+  "屯門 (請留意服務時間)*": {
+    "lat": 22.393937,
+    "lng": 113.973896,
+    "zh": "輕鐵屯門站 (請留意服務時間)*",
+    "en": "LR Tuen Mun Stop (Please refer to Service Time)*"
+  },
+  "港鐵兆康 (北) (兆康)": {
+    "lat": 22.4134,
+    "lng": 113.97902,
+    "zh": "港鐵兆康站 (北) (輕鐵兆康站)",
+    "en": "MTR Siu Hong Station (North) (LR Siu Hong Stop)"
+  },
+  "麒麟": {
+    "lat": 22.411042,
+    "lng": 113.97648,
+    "zh": "輕鐵麒麟站",
+    "en": "LR Kei Lun Stop"
+  },
+  "新圍": {
+    "lat": 22.405404,
+    "lng": 113.963966,
+    "zh": "輕鐵新圍站",
+    "en": "LR San Wai Stop"
+  },
+  "石排": {
+    "lat": 22.401983,
+    "lng": 113.967883,
+    "zh": "輕鐵石排站",
+    "en": "LR Shek Pai Stop"
+  },
+  "鳴琴": {
+    "lat": 22.396769,
+    "lng": 113.967425,
+    "zh": "輕鐵鳴琴站",
+    "en": "LR Ming Kum Stop"
+  },
+  "田景": {
+    "lat": 22.407716,
+    "lng": 113.96598,
+    "zh": "輕鐵田景站",
+    "en": "LR Tin King Stop"
+  },
+  "元朗 (元朗) (港鐵元朗)": {
+    "lat": 22.446443,
+    "lng": 114.034518,
+    "zh": "元朗站 (輕鐵元朗站) (港鐵元朗站)",
+    "en": "Yuen Long Station (LR Yuen Long Stop) (MTR Yuen Long Station)"
+  },
+  "水邊圍": {
+    "lat": 22.44457601,
+    "lng": 114.019733,
+    "zh": "輕鐵水邊圍站",
+    "en": "LR Shui Pin Wai Stop"
+  },
+  "坑尾村": {
+    "lat": 22.44588903,
+    "lng": 114.00512,
+    "zh": "輕鐵坑尾村站",
+    "en": "LR Hang Mei Tsuen Stop"
+  },
+  "屏山": {
+    "lat": 22.44322099,
+    "lng": 114.012915,
+    "zh": "輕鐵屏山站",
+    "en": "LR Ping Shan Stop"
+  },
+  "元朗 (元朗, 港鐵元朗)": {
+    "lat": 22.446443,
+    "lng": 114.034518,
+    "zh": "元朗站 (輕鐵元朗站, 港鐵元朗站)",
+    "en": "Yuen Long Station (LR Yuen Long Stop, MTR Yuen Long Station)"
+  },
+  "天水圍 (天水圍)": {
+    "lat": 22.44654,
+    "lng": 114.0037516,
+    "zh": "天水圍站 (輕鐵天水圍站)",
+    "en": "Tin Shui Wai Station (LR Tin Shui Wai Stop)"
+  },
+  "元朗大會堂 (豐年路)": {
+    "lat": 22.44362078,
+    "lng": 114.0222338,
+    "zh": "元朗大會堂 (輕鐵豐年路站)",
+    "en": "Yuen Long Town Hall (LR Fung Nin Road Stop)"
+  },
+  "聿修堂 (豐年路)": {
+    "lat": 22.442588,
+    "lng": 114.022245,
+    "zh": "聿修堂 (輕鐵豐年路站)",
+    "en": "Lut Sau Hall (LR Fung Nin Road Stop)"
+  },
+  "元朗廣場 (豐年路)": {
+    "lat": 22.44467,
+    "lng": 114.023718,
+    "zh": "元朗廣場 (輕鐵豐年路站)",
+    "en": "Yuen Long Plaza (LR Fung Nin Road Stop)"
+  },
+  "元朗西 (豐年路)": {
+    "lat": 22.445181,
+    "lng": 114.024919,
+    "zh": "元朗西 (輕鐵豐年路站)",
+    "en": "Yuen Long West (LR Fung Nin Road Stop)"
+  },
+  "天慈": {
+    "lat": 22.45321,
+    "lng": 114.005918,
+    "zh": "輕鐵天慈站",
+    "en": "LR Tin Tsz Stop"
+  },
+  "洪水橋": {
+    "lat": 22.433889,
+    "lng": 113.997633,
+    "zh": "輕鐵洪水橋站",
+    "en": "LR Hung Shui Kiu Stop"
+  },
+  "天耀": {
+    "lat": 22.450039,
+    "lng": 114.002836,
+    "zh": "輕鐵天耀站",
+    "en": "LR Tin Yiu Stop"
+  },
+  "濕地公園": {
+    "lat": 22.469919,
+    "lng": 114.002782,
+    "zh": "輕鐵濕地公園站",
+    "en": "LR Wetland Park Stop"
+  }
+}

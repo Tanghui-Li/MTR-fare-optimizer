@@ -1,11 +1,15 @@
-import { RouteResult, StationMap, TicketType, FareMatrix } from '../types'
-import { ArrowRight, MapPin, Zap, LogIn } from 'lucide-react'
+import { useState } from 'react'
+import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, PathStep } from '../types'
+import { lineColors, lineNames } from '../data/lineColors'
+import { ArrowRight, MapPin, Zap, LogIn, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface FragmentedRouteCardProps {
   routeResult: RouteResult
   stations: StationMap
   ticketType: TicketType
   activeMatrix: FareMatrix
+  detailedSegments: DetailedSegment[]
+  customLabel?: string
 }
 
 // Stations that should be collapsed into one line if adjacent
@@ -16,8 +20,51 @@ const COLLAPSE_GROUPS: { [id: string]: string } = {
   '80': '3'
 }
 
-const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix }: FragmentedRouteCardProps) => {
-  // Pre-process route to collapse walking interchanges for display
+/** Group consecutive PathSteps by lineCode for display */
+function groupByLine(path: PathStep[]): { lineCode: string; stations: string[] }[] {
+  if (path.length === 0) return [];
+  
+  const groups: { lineCode: string; stations: string[] }[] = [];
+  let currentGroup = { lineCode: path[0].lineCode, stations: [path[0].stationId] };
+  
+  for (let i = 1; i < path.length; i++) {
+    const step = path[i];
+    if (step.lineCode === currentGroup.lineCode) {
+      currentGroup.stations.push(step.stationId);
+    } else {
+      // Line changed!
+      // The current station 'step.stationId' is the first station of the NEW line,
+      // but it's also where the OLD line conceptually ends for the user.
+      // However, to avoid drawing lines that shouldn't exist, we must be careful.
+      
+      // If it's a walk, we definitely want to start a new group.
+      groups.push(currentGroup);
+      
+      // Start new group with the SAME station as the end of the previous one
+      // if they are at the same physical location (or it's a transfer)
+      // Actually, in our BFS, 'step.stationId' is already the station we just reached.
+      const lastStationId = currentGroup.stations[currentGroup.stations.length - 1];
+      currentGroup = { lineCode: step.lineCode, stations: [lastStationId, step.stationId] };
+    }
+  }
+  groups.push(currentGroup);
+  
+  return groups;
+}
+
+const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, detailedSegments, customLabel }: FragmentedRouteCardProps) => {
+  const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
+
+  const toggleSegment = (index: number) => {
+    setExpandedSegments(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  // Pre-process route to collapse walking interchanges for the header display
   const displayRoute: { id: string; mergedWith?: string }[] = []
   
   for (let i = 0; i < routeResult.route.length; i++) {
@@ -33,86 +80,139 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix }
   }
 
   return (
-    <div className="bg-white p-8 rounded-3xl shadow-2xl border-2 border-gray-900 relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-4">
-        <Zap className="w-8 h-8 text-yellow-400 fill-yellow-400" />
-      </div>
+    <div className="route-card optimized-card">
+      <div className="route-card-accent" />
 
-      <div className="space-y-8">
-        <div>
-          <h3 className="text-gray-400 font-black uppercase tracking-[0.2em] text-xs mb-1">Optimized Route</h3>
-          <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-black text-gray-900">HK$ {routeResult.totalFare.toFixed(1)}</span>
-            <span className="text-green-600 font-bold uppercase tracking-widest text-xs">Best {ticketType} Price</span>
+      <div className="route-card-inner">
+        <div className="route-card-header">
+          <div>
+            <h3 className="route-card-label">{customLabel || 'Optimized Route'}</h3>
+            <div className="route-card-fare-row">
+              <span className="route-card-fare">HK$ {routeResult.totalFare.toFixed(1)}</span>
+              <span className="route-card-fare-badge">Best {ticketType} Price</span>
+            </div>
           </div>
+          <Zap className="w-7 h-7 text-yellow-400 fill-yellow-400" />
         </div>
 
-        <div className="relative pl-8 border-l-2 border-dashed border-gray-200 space-y-10">
-          {displayRoute.map((item, index) => {
-            const isLast = index === displayRoute.length - 1
-            const isFirst = index === 0
-            const station = stations[item.id]
-            const mergedStation = item.mergedWith ? stations[item.mergedWith] : null
-            
-            // Find the fare for the segment ending at this line
-            // We need to find the original index in routeResult.route
-            const originalIndex = routeResult.route.indexOf(item.id)
-            let prevSegmentFare = 0
-            if (originalIndex > 0) {
-              const prevId = routeResult.route[originalIndex - 1]
-              prevSegmentFare = activeMatrix[prevId]?.[item.id] || 0
-            }
+        <div className="route-timeline">
+          {detailedSegments.map((seg, segIdx) => {
+            const isFirstSeg = segIdx === 0;
+            const isLastSeg = segIdx === detailedSegments.length - 1;
+            const isExpanded = expandedSegments.has(segIdx);
+            const lineGroups = groupByLine(seg.path);
+            const fromStation = stations[seg.from];
+            const toStation = stations[seg.to];
+            const mergedFrom = COLLAPSE_GROUPS[seg.from];
+            const mergedTo = COLLAPSE_GROUPS[seg.to];
+            const totalStops = seg.path.length;
+            const transferCount = lineGroups.length - 1;
 
             return (
-              <div key={index} className="relative">
-                {/* Timeline Dot */}
-                <div className={`absolute -left-[41px] w-5 h-5 rounded-full border-4 border-white shadow-md ${
-                  isFirst || isLast ? 'bg-gray-900' : 'bg-green-500'
-                }`} />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xl font-bold text-gray-900 leading-none">
-                      {station.zh}{mergedStation ? ` / ${mergedStation.zh}` : ''}
-                    </h4>
-                    <p className="text-gray-500 text-sm font-medium">
-                      {station.en}{mergedStation ? ` / ${mergedStation.en}` : ''}
-                    </p>
-                    
-                    {isFirst && (
-                      <div className="mt-2 flex items-center gap-1 text-gray-400 text-[10px] font-black uppercase tracking-tighter">
+              <div key={segIdx} className="route-segment">
+                {/* Entry point */}
+                {isFirstSeg && (
+                  <div className="route-stop route-stop-terminal">
+                    <div className="route-stop-dot origin" />
+                    <div className="route-stop-info">
+                      <h4>{fromStation?.zh}{mergedFrom && stations[mergedFrom] ? ` / ${stations[mergedFrom].zh}` : ''}</h4>
+                      <p>{fromStation?.en}{mergedFrom && stations[mergedFrom] ? ` / ${stations[mergedFrom].en}` : ''}</p>
+                      <div className="route-stop-action enter">
                         <LogIn className="w-3 h-3" />
                         Enter System
                       </div>
-                    )}
+                    </div>
                   </div>
-                  
-                  {!isFirst && (
-                    <div className="flex flex-col items-end">
-                      <div className="flex items-center gap-2 text-green-600 font-bold bg-green-50 px-3 py-1 rounded-lg border border-green-100">
-                        <span className="text-[10px] uppercase tracking-wider">{isLast ? 'Final Exit' : 'Exit & Re-enter'}</span>
-                        <ArrowRight className="w-4 h-4" />
-                        <div className="flex flex-col items-end">
-                          <span>HK$ {prevSegmentFare.toFixed(1)}</span>
-                          {ticketType === 'octopus' && prevSegmentFare === 0 && (
-                            <span className="text-[8px] text-blue-500 font-black uppercase tracking-tighter leading-none mt-1">
-                              免費港鐵接駁服務 🎁
+                )}
+
+                {/* Segment details (expandable) */}
+                <div className="route-segment-body">
+                  <button
+                    className="route-segment-summary"
+                    onClick={() => toggleSegment(segIdx)}
+                  >
+                    <div className="route-segment-lines">
+                      {lineGroups.map((g, gi) => (
+                        <span
+                          key={gi}
+                          className="route-segment-line-tag"
+                          style={{ backgroundColor: lineColors[g.lineCode] || '#666' }}
+                        >
+                          {lineNames[g.lineCode]?.zh || g.lineCode}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="route-segment-info-text">
+                      {totalStops} 站 · {transferCount > 0 ? `${transferCount} 次換乘` : '直達'}
+                    </span>
+                    {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+
+                  {/* Expanded path detail */}
+                  {isExpanded && (
+                    <div className="route-segment-detail">
+                      {lineGroups.map((group, gi) => (
+                        <div key={gi} className="route-line-group">
+                          <div className="route-line-group-header">
+                            <span
+                              className="route-line-color-bar"
+                              style={{ backgroundColor: lineColors[group.lineCode] || '#666' }}
+                            />
+                            <span className="route-line-group-name">
+                              {lineNames[group.lineCode]?.zh || group.lineCode}
+                              <span className="route-line-group-name-en">
+                                {lineNames[group.lineCode]?.en || ''}
+                              </span>
                             </span>
-                          )}
+                          </div>
+                          <div className="route-line-stations">
+                            {group.stations.map((sid, si) => {
+                              const st = stations[sid];
+                              if (!st) return null;
+                              return (
+                                <div key={`${sid}-${si}`} className="route-line-station">
+                                  <span
+                                    className="route-line-station-dot"
+                                    style={{ borderColor: lineColors[group.lineCode] || '#666' }}
+                                  />
+                                  <span className="route-line-station-name">
+                                    {st.zh}
+                                    <span className="route-line-station-en">{st.en}</span>
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   )}
                 </div>
 
-                {isLast && (
-                  <div className="mt-2 inline-flex items-center gap-2 text-gray-400 text-xs font-black uppercase tracking-wider">
-                    <MapPin className="w-3 h-3" />
-                    Trip Complete
+                {/* Exit point */}
+                <div className={`route-stop ${isLastSeg ? 'route-stop-terminal' : 'route-stop-transfer'}`}>
+                  <div className={`route-stop-dot ${isLastSeg ? 'destination' : 'exit-reenter'}`} />
+                  <div className="route-stop-info">
+                    <h4>{toStation?.zh}{mergedTo && stations[mergedTo] ? ` / ${stations[mergedTo].zh}` : ''}</h4>
+                    <p>{toStation?.en}{mergedTo && stations[mergedTo] ? ` / ${stations[mergedTo].en}` : ''}</p>
+                    <div className="route-stop-fare">
+                      <span className="route-stop-fare-label">{isLastSeg ? 'Final Exit' : 'Exit & Re-enter'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span className="route-stop-fare-amount">HK$ {seg.fare.toFixed(1)}</span>
+                      {ticketType === 'octopus' && seg.fare === 0 && (
+                        <span className="route-stop-free-badge">免費港鐵接駁服務 🎁</span>
+                      )}
+                    </div>
+                    {isLastSeg && (
+                      <div className="route-stop-action complete">
+                        <MapPin className="w-3 h-3" />
+                        Trip Complete
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>

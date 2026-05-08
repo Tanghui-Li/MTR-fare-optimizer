@@ -24,17 +24,11 @@ interface SearchableDropdownProps {
 }
 
 const accentStyles = {
-  green: {
-    border: 'border-green-500',
-    ring: 'ring-green-500/20',
-    bg: 'bg-green-50',
-    text: 'text-green-700'
-  },
-  red: {
-    border: 'border-red-500',
-    ring: 'ring-red-500/20',
-    bg: 'bg-red-50',
-    text: 'text-red-700'
+  slate: {
+    border: 'border-slate-900',
+    ring: 'ring-slate-900/20',
+    bg: 'bg-slate-50',
+    text: 'text-slate-900'
   }
 }
 
@@ -201,8 +195,8 @@ const ControlPanel = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative">
         {/* Origin Section */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-gray-900 font-bold mb-1">
-            <div className="w-2 h-6 bg-green-500 rounded-full" />
+          <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
+            <div className="w-2 h-6 bg-slate-900 rounded-full" />
             <h3>Starting Point</h3>
           </div>
           
@@ -210,7 +204,7 @@ const ControlPanel = ({
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">Select Line</label>
               <select 
-                className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-sm font-medium"
+                className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"
                 value={originLine}
                 onChange={(e) => {
                   setOriginLine(e.target.value)
@@ -224,14 +218,14 @@ const ControlPanel = ({
               </select>
             </div>
 
-            <SearchableDropdown 
-              label="Select Station"
-              options={originStations}
-              value={originId}
-              onChange={onOriginChange}
-              placeholder="Choose Station"
-              accentColor="green"
-            />
+              <SearchableDropdown 
+                label="Select Station"
+                options={originStations}
+                value={originId}
+                onChange={onOriginChange}
+                placeholder="Choose Station"
+                accentColor="slate"
+              />
           </div>
         </div>
 
@@ -248,8 +242,8 @@ const ControlPanel = ({
 
         {/* Destination Section */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-gray-900 font-bold mb-1">
-            <div className="w-2 h-6 bg-red-500 rounded-full" />
+          <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
+            <div className="w-2 h-6 bg-slate-900 rounded-full" />
             <h3>Final Destination</h3>
           </div>
 
@@ -257,7 +251,7 @@ const ControlPanel = ({
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">Select Line</label>
               <select 
-                className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none text-sm font-medium"
+                className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"
                 value={destLine}
                 onChange={(e) => {
                   setDestLine(e.target.value)
@@ -271,14 +265,14 @@ const ControlPanel = ({
               </select>
             </div>
 
-            <SearchableDropdown 
-              label="Select Station"
-              options={destStations}
-              value={destinationId}
-              onChange={onDestinationChange}
-              placeholder="Choose Station"
-              accentColor="red"
-            />
+              <SearchableDropdown 
+                label="Select Station"
+                options={destStations}
+                value={destinationId}
+                onChange={onDestinationChange}
+                placeholder="Choose Station"
+                accentColor="slate"
+              />
           </div>
         </div>
       </div>

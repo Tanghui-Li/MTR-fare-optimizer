@@ -45,3 +45,17 @@ export interface RouteSegment {
   toId: string;
   fare: number;
 }
+
+/** 路径中的一步（站+所乘线路） */
+export interface PathStep {
+  stationId: string;
+  lineCode: string;  // 乘坐哪条线到达/离开此站（首站为出发线路）
+}
+
+/** 一段完整路径（两次出入闸之间） */
+export interface DetailedSegment {
+  from: string;        // 入闸站 ID
+  to: string;          // 出闸站 ID
+  fare: number;
+  path: PathStep[];    // 站间详细路径（含所有途经站）
+}
