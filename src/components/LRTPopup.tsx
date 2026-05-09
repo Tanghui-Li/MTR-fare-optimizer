@@ -11,11 +11,8 @@ export default function LRTPopup({ stationId, stationName }: LRTPopupProps) {
   const [platforms, setPlatforms] = useState<LrtPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [active, setActive] = useState(false);
 
   useEffect(() => {
-    if (!active) return;
-
     let isMounted = true;
     async function load() {
       try {
@@ -42,17 +39,13 @@ export default function LRTPopup({ stationId, stationName }: LRTPopupProps) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [stationId, active]);
+  }, [stationId]);
 
   return (
     <Popup 
       className="lrt-popup" 
       minWidth={280} 
       maxWidth={280}
-      eventHandlers={{
-        add: () => setActive(true),
-        remove: () => setActive(false)
-      }}
     >
       <div className="lrt-popup-content">
         <div className="lrt-popup-header">

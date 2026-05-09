@@ -1,8 +1,24 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Popup } from 'react-leaflet';
 import { fetchNextTrain, NextTrainEntry, stationIdToCode } from '../services/mtrApi';
 import { lineColors, lineNames } from '../data/lineColors';
 import { StationMetadata } from '../types';
+import accessibilityRaw from '../data/accessibilityData.json';
+
+const accessibilityData = accessibilityRaw as {
+  facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
+  categories: Record<string, { catId: string; catZh: string; catEn: string; zh: string; en: string; order: number }>;
+};
+
+// Icons for each category
+const categoryIcons: Record<string, string> = {
+  AJ: '🚪', // System Accessibility
+  MJ: '♿', // Mobility Impaired
+  VJ: '👁️', // Visually Impaired
+  HJ: '🦻', // Hearing Impaired
+};
+
+const categoryOrder = ['AJ', 'MJ', 'VJ', 'HJ'];
 
 interface StationPopupProps {
   stationId: string;
@@ -21,6 +37,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [showAccessibility, setShowAccessibility] = useState(false);
 
   const loadTrainData = useCallback(async () => {
     setLoading(true);
@@ -92,8 +109,46 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
     return destNames[destCode] || destCode;
   };
 
+  // Build accessibility info grouped by category
+  const accessibilityInfo = useMemo(() => {
+    const stationFacilities = accessibilityData.facilities[stationId];
+    if (!stationFacilities) return null;
+
+    const grouped: Record<string, {
+      catZh: string;
+      catEn: string;
+      items: { code: string; zh: string; en: string; detail?: { zh: string; en: string } }[];
+    }> = {};
+
+    for (const [code, value] of Object.entries(stationFacilities)) {
+      const catInfo = accessibilityData.categories[code];
+      if (!catInfo) continue;
+
+      const catId = catInfo.catId;
+      if (!grouped[catId]) {
+        grouped[catId] = {
+          catZh: catInfo.catZh,
+          catEn: catInfo.catEn,
+          items: [],
+        };
+      }
+
+      const detail = typeof value === 'object' ? value : undefined;
+      grouped[catId].items.push({
+        code,
+        zh: catInfo.zh,
+        en: catInfo.en,
+        detail,
+      });
+    }
+
+    return grouped;
+  }, [stationId]);
+
+  const hasAccessibility = accessibilityInfo && Object.keys(accessibilityInfo).length > 0;
+
   return (
-    <Popup className="station-popup" maxWidth={430} minWidth={320}>
+    <Popup className="station-popup" maxWidth={480} minWidth={380}>
       <div className="popup-content">
         {/* Station header */}
         <div className="popup-header">
@@ -112,50 +167,90 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
           </div>
         </div>
 
-        {/* Train information */}
-        <div className="popup-trains">
-          {loading && trainData.length === 0 && (
-            <div className="popup-loading">
-              <div className="popup-loading-spinner" />
-              <span>正在載入列車資訊...</span>
-            </div>
-          )}
+        {/* Unified scrollable area for all content */}
+        <div className="popup-scroll-area">
+          {/* Train information */}
+          <div className="popup-trains">
+            {loading && trainData.length === 0 && (
+              <div className="popup-loading">
+                <div className="popup-loading-spinner" />
+                <span>正在載入列車資訊...</span>
+              </div>
+            )}
 
-          {error && (
-            <div className="popup-error">{error}</div>
-          )}
+            {error && (
+              <div className="popup-error">{error}</div>
+            )}
 
-          {trainData.map((dir, idx) => (
-            <div key={idx} className="popup-direction">
-              <div className="popup-direction-label">{dir.label}</div>
-              {dir.trains.length === 0 ? (
-                <div className="popup-no-train">暫無班次</div>
-              ) : (
-                <div className="popup-train-list">
-                  {dir.trains.map((train, tidx) => (
-                    <div key={tidx} className="popup-train-item">
-                      <span className="popup-train-dest">
-                        → {getDestName(train.dest)}
-                      </span>
-                      <span className="popup-train-plat">
-                        {train.plat}號月台
-                      </span>
-                      <span className={`popup-train-time ${
-                        train.ttnt === '0' || train.ttnt === '-' ? 'arriving' : ''
-                      }`}>
-                        {train.ttnt === '0' || train.ttnt === '-'
-                          ? '即將到站'
-                          : `${train.ttnt} 分鐘`}
-                      </span>
+            {trainData.map((dir, idx) => (
+              <div key={idx} className="popup-direction">
+                <div className="popup-direction-label">{dir.label}</div>
+                {dir.trains.length === 0 ? (
+                  <div className="popup-no-train">暫無班次</div>
+                ) : (
+                  <div className="popup-train-list">
+                    {dir.trains.map((train, tidx) => (
+                      <div key={tidx} className="popup-train-item">
+                        <span className="popup-train-dest">
+                          → {getDestName(train.dest)}
+                        </span>
+                        <span className="popup-train-plat">
+                          {train.plat}號月台
+                        </span>
+                        <span className={`popup-train-time ${
+                          train.ttnt === '0' || train.ttnt === '-' ? 'arriving' : ''
+                        }`}>
+                          {train.ttnt === '0' || train.ttnt === '-'
+                            ? '即將到站'
+                            : `${train.ttnt} 分鐘`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {!loading && trainData.length === 0 && !error && (
+              <div className="popup-no-train">目前沒有列車服務</div>
+            )}
+          </div>
+
+          {/* Accessibility Section */}
+          {hasAccessibility && (
+            <div className="popup-accessibility">
+              <div className="popup-accessibility-title" style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: '#374151', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                ♿ 無障礙設施 Barrier-free Facilities
+              </div>
+              <div className="popup-accessibility-content">
+                {categoryOrder.map(catId => {
+                  const group = accessibilityInfo![catId];
+                  if (!group || group.items.length === 0) return null;
+                  return (
+                    <div key={catId} className="popup-acc-category">
+                      <div className="popup-acc-category-header">
+                        <span className="popup-acc-category-icon">{categoryIcons[catId]}</span>
+                        <span className="popup-acc-category-name">{group.catZh}</span>
+                        <span className="popup-acc-category-name-en">{group.catEn}</span>
+                      </div>
+                      <div className="popup-acc-items">
+                        {group.items.map(item => (
+                          <div key={item.code} className="popup-acc-item">
+                            <span className="popup-acc-check">✓</span>
+                            <div className="popup-acc-item-text">
+                              <span className="popup-acc-item-name">{item.zh}</span>
+                              {item.detail && item.detail.zh && (
+                                <span className="popup-acc-item-detail">{item.detail.zh}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
-          ))}
-
-          {!loading && trainData.length === 0 && !error && (
-            <div className="popup-no-train">目前沒有列車服務</div>
           )}
         </div>
 

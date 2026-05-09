@@ -11,10 +11,16 @@ import stationsData from '../stations.json';
 import { StationMap, DetailedSegment } from '../types';
 import StationPopup from './StationPopup';
 import BusLayer from './BusLayer';
+import BusStopLayer from './BusStopLayer';
+import LRTStationLayer from './LRTStationLayer';
 import LRTPopup from './LRTPopup';
-import lrtStationsData from '../data/lrtStations.json';
+import AccessibilityFilter from './AccessibilityFilter';
+import accessibilityRaw from '../data/accessibilityData.json';
 
-const lrtStations = lrtStationsData as Record<string, { id: string; lat: number; lng: number; zh: string; en: string }>;
+const accessibilityData = accessibilityRaw as {
+  facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
+  categories: Record<string, { catId: string; catZh: string; catEn: string; zh: string; en: string; order: number }>;
+};
 
 const stations = stationsData as StationMap;
 const lines = linesData as Record<string, { name: { zh: string; en: string }; stations: string[] }>;
@@ -60,6 +66,24 @@ function RouteFitter({ routeSegments }: { routeSegments?: DetailedSegment[] }) {
 
 export default function MapView({ routeSegments, originId, destinationId }: MapViewProps) {
   const [showBuses, setShowBuses] = useState(true);
+  const [showBusStops, setShowBusStops] = useState(true);
+  const [showLRT, setShowLRT] = useState(true);
+  // Accessibility filter: array of clauses; each clause is a set of item codes (OR); all clauses must match (AND/CNF)
+  const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
+
+  // Compute highlighted stations based on accessibility filter (CNF)
+  const highlightedStationIds = useMemo(() => {
+    if (accessibilityFilter.length === 0) return null; // null = no filter active
+    const result = new Set<string>();
+    for (const [sid, facs] of Object.entries(accessibilityData.facilities)) {
+      // Check CNF: every clause must have at least one matching facility
+      const match = accessibilityFilter.every(clause =>
+        clause.some(code => code in facs)
+      );
+      if (match) result.add(sid);
+    }
+    return result;
+  }, [accessibilityFilter]);
 
   // Compute which lines pass through each station
   const stationLines = useMemo(() => getStationLines(lines), []);
@@ -196,13 +220,37 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
           <label className="map-toggle">
             <input
               type="checkbox"
+              checked={showLRT}
+              onChange={(e) => setShowLRT(e.target.checked)}
+            />
+            <span className="map-toggle-slider" />
+            <span className="map-toggle-label">
+              <span className="lrt-icon-dot" />
+              輕鐵站
+            </span>
+          </label>
+          <label className="map-toggle">
+            <input
+              type="checkbox"
+              checked={showBusStops}
+              onChange={(e) => setShowBusStops(e.target.checked)}
+            />
+            <span className="map-toggle-slider" />
+            <span className="map-toggle-label">
+              <span className="bus-stop-icon-dot" />
+              巴士站點
+            </span>
+          </label>
+          <label className="map-toggle">
+            <input
+              type="checkbox"
               checked={showBuses}
               onChange={(e) => setShowBuses(e.target.checked)}
             />
             <span className="map-toggle-slider" />
             <span className="map-toggle-label">
               <span className="bus-icon-dot" />
-              港鐵巴士實時位置
+              巴士實時
             </span>
           </label>
         </div>
@@ -213,14 +261,14 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
               <span className="legend-text">{lineNames[code]?.zh || code}</span>
             </span>
           ))}
-          {showBuses && (
-            <span className="legend-item">
-              <span className="legend-dot bus-legend-dot" />
-              <span className="legend-text">巴士</span>
-            </span>
-          )}
         </div>
       </div>
+
+      {/* Accessibility Filter Panel */}
+      <AccessibilityFilter
+        filter={accessibilityFilter}
+        onFilterChange={setAccessibilityFilter}
+      />
 
       {/* Leaflet Map */}
       <MapContainer
@@ -294,6 +342,10 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
           const isInterchange = marker.allLines.length > 1;
           const role = getStationRole(marker.id);
           
+          // Check accessibility highlight
+          const isAccHighlighted = highlightedStationIds ? highlightedStationIds.has(marker.id) : false;
+          const isAccDimmed = highlightedStationIds !== null && !isAccHighlighted;
+
           // Special rendering for route stations
           let radius = isInterchange ? 7 : 5;
           let color = isInterchange ? '#374151' : lineColors[marker.primaryLine] || '#666';
@@ -319,6 +371,17 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
             fillColor = '#fb923c';
             fillOpacity = 1;
             weight = 3;
+          }
+
+          // Accessibility filter highlighting
+          if (isAccHighlighted && !role) {
+            radius = 9;
+            color = '#7c3aed';
+            fillColor = '#a78bfa';
+            fillOpacity = 1;
+            weight = 3;
+          } else if (isAccDimmed && !role) {
+            fillOpacity = 0.25;
           }
 
           return (
@@ -358,32 +421,14 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
           );
         })}
 
-        {/* LRT Station Markers (Static + Live Popup) */}
-        {showBuses && lrtStations && Object.values(lrtStations).map((stop) => (
-          <CircleMarker
-            key={`lrt-${stop.id}`}
-            center={[stop.lat, stop.lng]}
-            radius={4}
-            pathOptions={{
-              color: '#94a3b8',
-              fillColor: '#ffffff',
-              fillOpacity: 1,
-              weight: 2,
-            }}
-          >
-            <Tooltip direction="top" offset={[0, -5]} className="station-tooltip">
-              <div style={{ textAlign: 'center' }}>
-                <strong style={{ fontSize: '12px' }}>{stop.zh}</strong>
-                <div style={{ fontSize: '10px', opacity: 0.7 }}>{stop.en}</div>
-                <div style={{ fontSize: '9px', opacity: 0.5, marginTop: '2px' }}>Light Rail Station</div>
-              </div>
-            </Tooltip>
-            <LRTPopup stationId={stop.id} stationName={stop.zh} />
-          </CircleMarker>
-        ))}
-
-        {/* MTR Bus Layer */}
+        {/* MTR Bus Layer (live vehicles) */}
         {showBuses && <BusLayer />}
+
+        {/* MTR Bus Stop Locations */}
+        {showBusStops && <BusStopLayer />}
+
+        {/* LRT Station Markers (Static + Live Popup) */}
+        {showLRT && <LRTStationLayer />}
       </MapContainer>
 
       {/* Data Source Attribution */}
