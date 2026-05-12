@@ -3,6 +3,9 @@ import { CircleMarker, useMap, Popup } from 'react-leaflet';
 import { fetchMtrBusSchedule } from '../services/mtrApi';
 import { mtrBusRoutes } from '../data/lineColors';
 import busStopNamesData from '../data/busStopNames.json';
+import { Locale } from '../types';
+import { t } from '../i18n';
+import { cleanBusArrivalText } from '../data/unifiedNetwork';
 
 const busStopNames = busStopNamesData as Record<string, { zh: string; en: string }>;
 
@@ -18,7 +21,11 @@ interface BusVehicle {
   arrivalTimeInSecond: number;
 }
 
-export default function BusLayer() {
+interface BusLayerProps {
+  locale: Locale;
+}
+
+export default function BusLayer({ locale }: BusLayerProps) {
   const [vehicles, setVehicles] = useState<BusVehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const map = useMap();
@@ -65,7 +72,7 @@ export default function BusLayer() {
                       lat,
                       lng,
                       nextStopName: stopName,
-                      timeText: bus.departureTimeText || '行駛中',
+                      timeText: cleanBusArrivalText(bus.departureTimeText || '行駛中'),
                       isDelayed: bus.isDelayed === '1',
                       remark: bus.busRemark || '',
                       arrivalTimeInSecond: arrivalSeconds
@@ -110,7 +117,7 @@ export default function BusLayer() {
             <div className="bus-popup-content">
               <div className="bus-popup-header">
                 <span className="bus-route-badge">{v.route}</span>
-                <span className="bus-id-tag">车辆编号 #{v.busId}</span>
+                <span className="bus-id-tag">{locale === 'en' ? 'Vehicle' : locale === 'zh-Hans' ? '车辆编号' : '車輛編號'} #{v.busId}</span>
               </div>
               
               <div className="bus-eta-list">
@@ -118,17 +125,19 @@ export default function BusLayer() {
                   <div className="bus-eta-main">
                     <span className="bus-dest">
                       {v.remark && v.remark.trim() 
-                        ? (v.remark.includes('往') ? v.remark : `往 ${v.remark}`)
-                        : '正在前往終點站'}
+                        ? (v.remark.includes('往') ? v.remark : `${t(locale, 'busTo')} ${v.remark}`)
+                        : t(locale, 'busHeading')}
                     </span>
                   </div>
                   <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
-                    <span className="bus-next-stop-label">下一站：</span>
+                    <span className="bus-next-stop-label">{t(locale, 'nextStop')}</span>
                     <span className="bus-stop-name-highlight">{v.nextStopName}</span>
                   </div>
                   <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
                     <span className={`bus-eta-time ${v.isDelayed ? 'delayed' : ''}`}>
-                      预计 {v.timeText} 到达
+                      {v.timeText.includes('即將開出') || v.timeText.includes('即将开出') || v.timeText.includes('已離開') || v.timeText.includes('已离开') || v.timeText.includes('行駛中') || v.timeText.includes('行驶中') || v.timeText.includes('到達') || v.timeText.includes('到达')
+                        ? v.timeText
+                        : `${t(locale, 'estimated')} ${v.timeText}`}
                     </span>
                   </div>
                 </div>

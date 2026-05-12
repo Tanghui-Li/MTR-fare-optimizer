@@ -1,18 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { StationMap, TicketType } from '../types'
 import { Search, CreditCard, Ticket, ChevronDown, ArrowRightLeft } from 'lucide-react'
-import linesData from '../lines.json'
-
-interface LineData {
-  name: { zh: string; en: string }
-  stations: string[]
-}
-
-interface LinesMap {
-  [lineCode: string]: LineData
-}
-
-const lines = linesData as LinesMap
+import { getLineFilterOptions, getSelectableStations, getLocalizedLineDefinitionLabel } from '../data/unifiedNetwork'
+import { Locale } from '../types'
+import { t } from '../i18n'
 
 interface SearchableDropdownProps {
   label: string
@@ -21,6 +12,7 @@ interface SearchableDropdownProps {
   onChange: (id: string) => void
   placeholder: string
   accentColor: string
+  locale: Locale
 }
 
 const accentStyles = {
@@ -32,7 +24,7 @@ const accentStyles = {
   }
 }
 
-const SearchableDropdown = ({ label, options, value, onChange, placeholder, accentColor }: SearchableDropdownProps) => {
+const SearchableDropdown = ({ label, options, value, onChange, placeholder, accentColor, locale }: SearchableDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -43,6 +35,10 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
   const filteredOptions = options.filter(o => 
     o.zh.includes(search) || o.en.toLowerCase().includes(search.toLowerCase())
   )
+  const stationText = (station?: { zh: string; en: string }) => {
+    if (!station) return ''
+    return locale === 'en' ? station.en : station.zh
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -64,7 +60,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
         }`}
       >
         <span className={`text-sm font-medium ${!selectedStation ? 'text-gray-400' : 'text-gray-900'}`}>
-          {selectedStation ? `${selectedStation.zh} ${selectedStation.en}` : placeholder}
+          {selectedStation ? stationText(selectedStation) : placeholder}
         </span>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </div>
@@ -78,7 +74,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                 autoFocus
                 type="text"
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:bg-white transition-colors"
-                placeholder="Search station..."
+                placeholder={locale === 'en' ? 'Search station...' : locale === 'zh-Hans' ? '搜索车站...' : '搜尋車站...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -98,8 +94,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                     value === s.id ? `${styles.bg} ${styles.text} font-bold` : 'hover:bg-gray-50'
                   }`}
                 >
-                  <div className="text-sm">{s.zh}</div>
-                  <div className="text-[10px] opacity-60 uppercase tracking-wider">{s.en}</div>
+                  <div className="text-sm">{locale === 'en' ? s.en : s.zh}</div>
                 </div>
               ))
             ) : (
@@ -120,6 +115,7 @@ interface ControlPanelProps {
   onOriginChange: (id: string) => void
   onDestinationChange: (id: string) => void
   onTicketTypeChange: (type: TicketType) => void
+  locale: Locale
 }
 
 const ControlPanel = ({
@@ -130,18 +126,21 @@ const ControlPanel = ({
   onOriginChange,
   onDestinationChange,
   onTicketTypeChange,
+  locale,
 }: ControlPanelProps) => {
   const [originLine, setOriginLine] = useState<string>('ALL')
   const [destLine, setDestLine] = useState<string>('ALL')
 
+  const lineOptions = [{ code: 'ALL', zh: '所有路線', zhHans: '所有线路', en: 'All Routes', category: 'MTR' as const }, ...getLineFilterOptions()]
   const getFilteredStations = (lineCode: string) => {
-    const stationIds = lineCode === 'ALL' 
-      ? Object.keys(stations) 
-      : lines[lineCode]?.stations || []
-    
-    let result = stationIds.map(id => ({ id, ...stations[id] }))
+    const result = getSelectableStations(lineCode).map((option) => ({
+      id: option.id,
+      zh: option.zh,
+      en: option.en,
+    }))
+
     if (lineCode === 'ALL') {
-      result.sort((a, b) => a.en.localeCompare(b.en))
+      result.sort((a, b) => (locale === 'en' ? a.en : a.zh).localeCompare(locale === 'en' ? b.en : b.zh, locale === 'en' ? 'en' : 'zh-HK'))
     }
     return result
   }
@@ -176,7 +175,7 @@ const ControlPanel = ({
             }`}
           >
             <CreditCard className="w-4 h-4" />
-            Adult Octopus
+            {t(locale, 'ticketOctopus')}
           </button>
           <button
             onClick={() => onTicketTypeChange('single')}
@@ -187,7 +186,7 @@ const ControlPanel = ({
             }`}
           >
             <Ticket className="w-4 h-4" />
-            Adult Single
+            {t(locale, 'ticketSingle')}
           </button>
         </div>
       </div>
@@ -197,12 +196,12 @@ const ControlPanel = ({
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
             <div className="w-2 h-6 bg-slate-900 rounded-full" />
-            <h3>Starting Point</h3>
+            <h3>{t(locale, 'startingPoint')}</h3>
           </div>
           
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">Select Line</label>
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'selectLine')}</label>
               <select 
                 className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"
                 value={originLine}
@@ -211,20 +210,20 @@ const ControlPanel = ({
                   onOriginChange('')
                 }}
               >
-                <option value="ALL">All MTR Lines</option>
-                {Object.entries(lines).map(([code, data]) => (
-                  <option key={code} value={code}>{data.name.zh} {data.name.en}</option>
+                {lineOptions.map((line) => (
+                  <option key={line.code} value={line.code}>{getLocalizedLineDefinitionLabel(line, locale)}</option>
                 ))}
               </select>
             </div>
 
               <SearchableDropdown 
-                label="Select Station"
+                label={t(locale, 'selectStation')}
                 options={originStations}
                 value={originId}
                 onChange={onOriginChange}
-                placeholder="Choose Station"
+                placeholder={locale === 'en' ? 'Choose station' : locale === 'zh-Hans' ? '选择车站' : '選擇車站'}
                 accentColor="slate"
+                locale={locale}
               />
           </div>
         </div>
@@ -234,7 +233,7 @@ const ControlPanel = ({
           <button 
             onClick={handleSwap}
             className="bg-white border-2 border-gray-100 p-2.5 rounded-full shadow-lg hover:shadow-xl hover:border-gray-200 transition-all hover:rotate-180 duration-300"
-            title="Swap Origin and Destination"
+            title={t(locale, 'swapStations')}
           >
             <ArrowRightLeft className="w-4 h-4 text-gray-400" />
           </button>
@@ -244,12 +243,12 @@ const ControlPanel = ({
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
             <div className="w-2 h-6 bg-slate-900 rounded-full" />
-            <h3>Final Destination</h3>
+            <h3>{t(locale, 'finalDestination')}</h3>
           </div>
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">Select Line</label>
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'selectLine')}</label>
               <select 
                 className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"
                 value={destLine}
@@ -258,20 +257,20 @@ const ControlPanel = ({
                   onDestinationChange('')
                 }}
               >
-                <option value="ALL">All MTR Lines</option>
-                {Object.entries(lines).map(([code, data]) => (
-                  <option key={code} value={code}>{data.name.zh} {data.name.en}</option>
+                {lineOptions.map((line) => (
+                  <option key={line.code} value={line.code}>{getLocalizedLineDefinitionLabel(line, locale)}</option>
                 ))}
               </select>
             </div>
 
               <SearchableDropdown 
-                label="Select Station"
+              label={t(locale, 'selectStation')}
                 options={destStations}
                 value={destinationId}
                 onChange={onDestinationChange}
-                placeholder="Choose Station"
+                placeholder={locale === 'en' ? 'Choose station' : locale === 'zh-Hans' ? '选择车站' : '選擇車站'}
                 accentColor="slate"
+              locale={locale}
               />
           </div>
         </div>

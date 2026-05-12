@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { CircleMarker, Tooltip } from 'react-leaflet';
 import busStopData from '../data/busStopLocations.json';
+import { Locale } from '../types';
 
 interface BusStopEntry {
   id: string;
@@ -13,7 +14,11 @@ interface BusStopEntry {
 
 const busStops = busStopData as BusStopEntry[];
 
-export default function BusStopLayer() {
+interface BusStopLayerProps {
+  locale: Locale;
+}
+
+export default function BusStopLayer({ locale }: BusStopLayerProps) {
   const markers = useMemo(() => busStops, []);
 
   return (
@@ -36,8 +41,8 @@ export default function BusStopLayer() {
             className="bus-stop-tooltip"
           >
             <div className="bus-stop-tooltip-content">
-              <div className="bus-stop-tooltip-name">{stop.zh}</div>
-              {stop.en && (
+              <div className="bus-stop-tooltip-name">{locale === 'en' ? stop.en : stop.zh}</div>
+              {stop.en && locale !== 'en' && (
                 <div className="bus-stop-tooltip-name-en">{stop.en}</div>
               )}
               <div className="bus-stop-tooltip-routes">

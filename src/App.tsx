@@ -2,20 +2,14 @@ import { useState, useEffect, useMemo } from 'react'
 import ControlPanel from './components/ControlPanel'
 import RouteVisualizer from './components/RouteVisualizer'
 import MapView from './components/MapView'
-import { findCheapestRoute } from './pathfinder'
-import { planDetailedRoute, planBoringRoute } from './routePlanner'
-import stationsData from './stations.json'
+import { findMultimodalRoute } from './routePlanner'
+import { unifiedStationMap } from './data/unifiedNetwork'
 import fareMatrixData from './fare_matrix.json'
-import { RouteResult, StationMap, TicketType, UnifiedFareMatrix, FareMatrix, DetailedSegment } from './types'
+import { RouteResult, StationMap, TicketType, UnifiedFareMatrix, FareMatrix, DetailedSegment, Locale } from './types'
+import { localeOptions, t } from './i18n'
 
-const stations = stationsData as StationMap
+const stations = unifiedStationMap as StationMap
 const rawFareMatrix = fareMatrixData as UnifiedFareMatrix
-
-// Merged Hub IDs: Hong Kong (39), Kowloon (40), Tsing Yi (42)
-// AEL Stations after merge: Hubs + Airport (47) + AsiaWorld-Expo (56)
-const HUB_STATIONS = ['39', '40', '42'];
-const AIRPORT_EXPO_STATIONS = ['47', '56'];
-const AEL_STATIONS = [...HUB_STATIONS, ...AIRPORT_EXPO_STATIONS];
 
 type RouteMode = 'optimized' | 'boring';
 
@@ -23,13 +17,13 @@ function App() {
   const [originId, setOriginId] = useState<string | null>(null)
   const [destinationId, setDestinationId] = useState<string | null>(null)
   const [ticketType, setTicketType] = useState<TicketType>('octopus')
+  const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
   
   const [displayedOriginId, setDisplayedOriginId] = useState<string | null>(null)
   const [displayedDestinationId, setDisplayedDestinationId] = useState<string | null>(null)
   const [displayedTicketType, setDisplayedTicketType] = useState<TicketType>('octopus')
   const [directFare, setDirectFare] = useState<number>(0)
-  const [boringRouteDetails, setBoringRouteDetails] = useState<{hubId: string, fare1: number, fare2: number} | undefined>(undefined)
   const [activeMatrix, setActiveMatrix] = useState<FareMatrix | null>(null)
 
   // Route visualization state
@@ -44,94 +38,18 @@ function App() {
 
   useEffect(() => {
     if (originId && destinationId) {
-      const isAELTrip = AIRPORT_EXPO_STATIONS.includes(originId) || AIRPORT_EXPO_STATIONS.includes(destinationId);
       let matrixToUse: FareMatrix = JSON.parse(JSON.stringify(rawFareMatrix[ticketType]));
+      const optimizedResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'optimized')
+      const boringResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'boring')
 
-      if (ticketType === 'octopus') {
-        if (isAELTrip) {
-          // Octopus AEL: MTR part is free
-          for (const src in matrixToUse) {
-            for (const dest in matrixToUse[src]) {
-              const isSrcAEL = AEL_STATIONS.includes(src);
-              const isDestAEL = AEL_STATIONS.includes(dest);
-              const isAELLink = isSrcAEL && isDestAEL && matrixToUse[src][dest] > 0;
-              
-              if (!isAELLink) {
-                matrixToUse[src][dest] = 0;
-              }
-            }
-          }
-        } else {
-          // Octopus Non-AEL: AEL is forbidden
-          for (const src in matrixToUse) {
-            if (AEL_STATIONS.includes(src)) {
-              for (const dest in matrixToUse[src]) {
-                if (AEL_STATIONS.includes(dest) && matrixToUse[src][dest] > 0) {
-                  if (AIRPORT_EXPO_STATIONS.includes(src) || AIRPORT_EXPO_STATIONS.includes(dest)) {
-                    matrixToUse[src][dest] = Infinity;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const result = findCheapestRoute(matrixToUse, originId, destinationId)
-      
-      // Calculate directFare for display
-      let calculatedDirectFare = originId === destinationId
-        ? 0
-        : (rawFareMatrix[ticketType][originId]?.[destinationId] || Infinity);
-      let boringDetails: { hubId: string, fare1: number, fare2: number } | undefined = undefined;
-      
-      if (isAELTrip) {
-        if (ticketType === 'octopus') {
-          calculatedDirectFare = result.totalFare;
-        } else {
-          const actualDirect = rawFareMatrix['single'][originId]?.[destinationId];
-          
-          if (actualDirect !== undefined && actualDirect < Infinity) {
-            calculatedDirectFare = actualDirect;
-          } else {
-            let minOneStopFare = Infinity;
-            for (const hubId of HUB_STATIONS) {
-              const fare1 = rawFareMatrix['single'][originId]?.[hubId] || Infinity;
-              const fare2 = rawFareMatrix['single'][hubId]?.[destinationId] || Infinity;
-              if (fare1 + fare2 < minOneStopFare) {
-                minOneStopFare = fare1 + fare2;
-                boringDetails = { hubId, fare1, fare2 };
-              }
-            }
-            calculatedDirectFare = minOneStopFare;
-          }
-        }
-      }
-
-      // Plan detailed paths for both modes
-      // Optimized route: use Dijkstra result segments
-      const forbiddenForOptimized = (!isAELTrip && ticketType === 'octopus') ? new Set(['AEL']) : undefined;
-      const optSegments = planDetailedRoute(result.route, matrixToUse, forbiddenForOptimized);
-
-      // Boring route: direct or through hub
-      const boringFareMatrix = rawFareMatrix[ticketType];
-      const borSegments = planBoringRoute(
-        originId,
-        destinationId,
-        calculatedDirectFare,
-        boringFareMatrix,
-        boringDetails,
-      );
-
-      setRouteResult(result)
+      setRouteResult(optimizedResult)
       setDisplayedOriginId(originId)
       setDisplayedDestinationId(destinationId)
       setDisplayedTicketType(ticketType)
-      setDirectFare(calculatedDirectFare)
-      setBoringRouteDetails(boringDetails)
+      setDirectFare(boringResult.totalFare)
       setActiveMatrix(matrixToUse)
-      setOptimizedSegments(optSegments)
-      setBoringSegments(borSegments)
+      setOptimizedSegments(optimizedResult.segments || [])
+      setBoringSegments(boringResult.segments || [])
 
     } else {
       setRouteResult(null)
@@ -148,10 +66,23 @@ function App() {
         <div className="tab-nav-inner">
           <div className="tab-brand">
             <span className="tab-brand-icon">🚇</span>
-            <span className="tab-brand-text">MTR <span className="tab-brand-accent">Tools</span></span>
+            <span className="tab-brand-text">{t(locale, 'appBrand')} <span className="tab-brand-accent">Tools</span></span>
           </div>
-          <div className="tab-brand-sub">
-            票價計算 · 路線規劃 · 實時地圖
+          <div className="tab-nav-actions">
+            <div className="tab-brand-sub">
+              {t(locale, 'appSubtitle')}
+            </div>
+            <div className="lang-switcher" aria-label={t(locale, 'language')}>
+              {localeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  className={`lang-switcher-btn ${locale === option.value ? 'active' : ''}`}
+                  onClick={() => setLocale(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </nav>
@@ -163,8 +94,8 @@ function App() {
           <div className="left-panel-inner">
             {/* Compact Header */}
             <header className="compact-header">
-              <h1>MTR Fare <span>Optimizer</span></h1>
-              <p>"Because why pay full price when you can walk through a gate?"</p>
+              <h1>MTR Fare <span>{t(locale, 'heroAccent')}</span></h1>
+              <p>"{t(locale, 'heroTagline')}"</p>
             </header>
             
             <ControlPanel 
@@ -175,6 +106,7 @@ function App() {
               onOriginChange={setOriginId}
               onDestinationChange={setDestinationId}
               onTicketTypeChange={setTicketType}
+              locale={locale}
             />
 
             {routeResult && displayedOriginId && displayedDestinationId && activeMatrix && (
@@ -185,12 +117,12 @@ function App() {
                 originId={displayedOriginId}
                 destinationId={displayedDestinationId}
                 ticketType={displayedTicketType}
-                boringRouteDetails={boringRouteDetails}
                 activeMatrix={activeMatrix}
                 routeMode={routeMode}
                 onRouteModeChange={setRouteMode}
                 optimizedSegments={optimizedSegments}
                 boringSegments={boringSegments}
+                locale={locale}
               />
             )}
             <div style={{ textAlign: 'center', padding: '20px', opacity: 0.3, fontSize: '10px' }}>
@@ -205,6 +137,7 @@ function App() {
             routeSegments={activeSegments.length > 0 ? activeSegments : undefined}
             originId={displayedOriginId}
             destinationId={displayedDestinationId}
+            locale={locale}
           />
         </div>
       </div>

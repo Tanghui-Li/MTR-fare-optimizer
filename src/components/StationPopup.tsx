@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Popup } from 'react-leaflet';
-import { fetchNextTrain, NextTrainEntry, stationIdToCode } from '../services/mtrApi';
-import { lineColors, lineNames } from '../data/lineColors';
-import { StationMetadata } from '../types';
+import { fetchNextTrain, NextTrainEntry, stationCodeToId, stationIdToCode } from '../services/mtrApi';
+import { lineColors, getLocalizedLineName } from '../data/lineColors';
+import { StationMetadata, Locale, StationMap } from '../types';
 import accessibilityRaw from '../data/accessibilityData.json';
+import { t } from '../i18n';
+import stationsData from '../stations.json';
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
@@ -19,11 +21,13 @@ const categoryIcons: Record<string, string> = {
 };
 
 const categoryOrder = ['AJ', 'MJ', 'VJ', 'HJ'];
+const stationCatalog = stationsData as StationMap;
 
 interface StationPopupProps {
   stationId: string;
   station: StationMetadata;
   lines: string[];
+  locale: Locale;
 }
 
 interface TrainDirection {
@@ -32,7 +36,7 @@ interface TrainDirection {
   trains: NextTrainEntry[];
 }
 
-export default function StationPopup({ stationId, station, lines }: StationPopupProps) {
+export default function StationPopup({ stationId, station, lines, locale }: StationPopupProps) {
   const [trainData, setTrainData] = useState<TrainDirection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +49,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
 
     const stationCode = stationIdToCode[stationId];
     if (!stationCode) {
-      setError('車站代碼未知');
+      setError(locale === 'en' ? 'Unknown station code' : locale === 'zh-Hans' ? '车站代码未知' : '車站代碼未知');
       setLoading(false);
       return;
     }
@@ -60,7 +64,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
           const key = `${lineCode}-${stationCode}`;
           const data = resp.data[key];
           if (data) {
-            const lineName = lineNames[lineCode]?.zh || lineCode;
+            const lineName = getLocalizedLineName(lineCode, locale);
             if (data.UP && data.UP.length > 0) {
               allDirections.push({
                 direction: 'UP',
@@ -80,14 +84,14 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
       }
 
       setTrainData(allDirections);
-      setLastUpdated(new Date().toLocaleTimeString('zh-HK'));
+      setLastUpdated(new Date().toLocaleTimeString(locale === 'en' ? 'en-GB' : 'zh-HK'));
     } catch (e) {
-      setError('無法獲取列車資訊');
+      setError(locale === 'en' ? 'Unable to fetch train information' : locale === 'zh-Hans' ? '无法获取列车信息' : '無法獲取列車資訊');
       console.error('Next train fetch error:', e);
     }
 
     setLoading(false);
-  }, [stationId, lines]);
+  }, [stationId, lines, locale]);
 
   useEffect(() => {
     loadTrainData();
@@ -97,16 +101,23 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
 
   // Get station code for the dest field
   const getDestName = (destCode: string): string => {
-    // Common destination mappings
-    const destNames: Record<string, string> = {
-      CEN: '中環', ADM: '金鐘', TST: '尖沙咀', KOW: '九龍', HOK: '香港',
-      TSW: '荃灣', CHW: '柴灣', KET: '堅尼地城', TIK: '調景嶺', WHA: '黃埔',
-      POA: '寶琳', LHP: '康城', NOP: '北角', TUC: '東涌', DIS: '迪士尼',
-      LOW: '羅湖', LMC: '落馬洲', TUM: '屯門', WKS: '烏溪沙',
-      AIR: '機場', AWE: '博覽館', SOH: '海怡半島',
-      SUN: '欣澳', TSY: '青衣',
+    const destStationId = stationCodeToId[destCode];
+    const destStation = destStationId ? stationCatalog[destStationId] : undefined;
+    if (destStation) {
+      return locale === 'en' ? destStation.en : destStation.zh;
+    }
+
+    const fallback: Record<string, { zh: string; en: string }> = {
+      CEN: { zh: '中環', en: 'Central' }, ADM: { zh: '金鐘', en: 'Admiralty' }, TST: { zh: '尖沙咀', en: 'Tsim Sha Tsui' },
+      KOW: { zh: '九龍', en: 'Kowloon' }, HOK: { zh: '香港', en: 'Hong Kong' }, TSW: { zh: '荃灣', en: 'Tsuen Wan' },
+      CHW: { zh: '柴灣', en: 'Chai Wan' }, KET: { zh: '堅尼地城', en: 'Kennedy Town' }, TIK: { zh: '調景嶺', en: 'Tiu Keng Leng' },
+      WHA: { zh: '黃埔', en: 'Whampoa' }, POA: { zh: '寶琳', en: 'Po Lam' }, LHP: { zh: '康城', en: 'LOHAS Park' },
+      NOP: { zh: '北角', en: 'North Point' }, TUC: { zh: '東涌', en: 'Tung Chung' }, DIS: { zh: '迪士尼', en: 'Disneyland Resort' },
+      LOW: { zh: '羅湖', en: 'Lo Wu' }, LMC: { zh: '落馬洲', en: 'Lok Ma Chau' }, TUM: { zh: '屯門', en: 'Tuen Mun' },
+      WKS: { zh: '烏溪沙', en: 'Wu Kai Sha' }, AIR: { zh: '機場', en: 'Airport' }, AWE: { zh: '博覽館', en: 'AsiaWorld-Expo' },
+      SOH: { zh: '海怡半島', en: 'South Horizons' }, SUN: { zh: '欣澳', en: 'Sunny Bay' }, TSY: { zh: '青衣', en: 'Tsing Yi' },
     };
-    return destNames[destCode] || destCode;
+    return fallback[destCode]?.[locale === 'en' ? 'en' : 'zh'] || destCode;
   };
 
   // Build accessibility info grouped by category
@@ -152,8 +163,8 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
       <div className="popup-content">
         {/* Station header */}
         <div className="popup-header">
-          <h3 className="popup-station-name">{station.zh}</h3>
-          <span className="popup-station-name-en">{station.en}</span>
+          <h3 className="popup-station-name">{locale === 'en' ? station.en : station.zh}</h3>
+          {locale !== 'en' && <span className="popup-station-name-en">{station.en}</span>}
           <div className="popup-line-tags">
             {lines.map(line => (
               <span
@@ -161,7 +172,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
                 className="popup-line-tag"
                 style={{ backgroundColor: lineColors[line] || '#666' }}
               >
-                {lineNames[line]?.zh || line}
+                {getLocalizedLineName(line, locale)}
               </span>
             ))}
           </div>
@@ -174,7 +185,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
             {loading && trainData.length === 0 && (
               <div className="popup-loading">
                 <div className="popup-loading-spinner" />
-                <span>正在載入列車資訊...</span>
+                <span>{t(locale, 'loading')}</span>
               </div>
             )}
 
@@ -186,7 +197,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
               <div key={idx} className="popup-direction">
                 <div className="popup-direction-label">{dir.label}</div>
                 {dir.trains.length === 0 ? (
-                  <div className="popup-no-train">暫無班次</div>
+                  <div className="popup-no-train">{locale === 'en' ? 'No service' : locale === 'zh-Hans' ? '暂无班次' : '暫無班次'}</div>
                 ) : (
                   <div className="popup-train-list">
                     {dir.trains.map((train, tidx) => (
@@ -195,14 +206,14 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
                           → {getDestName(train.dest)}
                         </span>
                         <span className="popup-train-plat">
-                          {train.plat}號月台
+                          {locale === 'en' ? `Platform ${train.plat}` : `${train.plat}號月台`}
                         </span>
                         <span className={`popup-train-time ${
                           train.ttnt === '0' || train.ttnt === '-' ? 'arriving' : ''
                         }`}>
                           {train.ttnt === '0' || train.ttnt === '-'
-                            ? '即將到站'
-                            : `${train.ttnt} 分鐘`}
+                            ? (locale === 'en' ? 'Arriving' : locale === 'zh-Hans' ? '即将到站' : '即將到站')
+                            : locale === 'en' ? `${train.ttnt} min` : `${train.ttnt} 分鐘`}
                         </span>
                       </div>
                     ))}
@@ -212,7 +223,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
             ))}
 
             {!loading && trainData.length === 0 && !error && (
-              <div className="popup-no-train">目前沒有列車服務</div>
+              <div className="popup-no-train">{locale === 'en' ? 'No train service' : locale === 'zh-Hans' ? '目前没有列车服务' : '目前沒有列車服務'}</div>
             )}
           </div>
 
@@ -220,7 +231,7 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
           {hasAccessibility && (
             <div className="popup-accessibility">
               <div className="popup-accessibility-title" style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: '#374151', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                ♿ 無障礙設施 Barrier-free Facilities
+                ♿ {locale === 'en' ? 'Barrier-free Facilities' : locale === 'zh-Hans' ? '无障碍设施' : '無障礙設施'}
               </div>
               <div className="popup-accessibility-content">
                 {categoryOrder.map(catId => {
@@ -230,17 +241,16 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
                     <div key={catId} className="popup-acc-category">
                       <div className="popup-acc-category-header">
                         <span className="popup-acc-category-icon">{categoryIcons[catId]}</span>
-                        <span className="popup-acc-category-name">{group.catZh}</span>
-                        <span className="popup-acc-category-name-en">{group.catEn}</span>
+                        <span className="popup-acc-category-name">{locale === 'en' ? group.catEn : group.catZh}</span>
                       </div>
                       <div className="popup-acc-items">
                         {group.items.map(item => (
                           <div key={item.code} className="popup-acc-item">
                             <span className="popup-acc-check">✓</span>
                             <div className="popup-acc-item-text">
-                              <span className="popup-acc-item-name">{item.zh}</span>
-                              {item.detail && item.detail.zh && (
-                                <span className="popup-acc-item-detail">{item.detail.zh}</span>
+                              <span className="popup-acc-item-name">{locale === 'en' ? item.en : item.zh}</span>
+                              {item.detail && (item.detail.zh || item.detail.en) && (
+                                <span className="popup-acc-item-detail">{locale === 'en' ? item.detail.en : item.detail.zh}</span>
                               )}
                             </div>
                           </div>
@@ -257,9 +267,9 @@ export default function StationPopup({ stationId, station, lines }: StationPopup
         {/* Footer */}
         {lastUpdated && (
           <div className="popup-footer">
-            <span className="popup-update-time">更新時間: {lastUpdated}</span>
+            <span className="popup-update-time">{t(locale, 'updated')}: {lastUpdated}</span>
             <button className="popup-refresh-btn" onClick={loadTrainData} disabled={loading}>
-              {loading ? '⟳' : '↻ 刷新'}
+              {loading ? '⟳' : `↻ ${t(locale, 'refresh')}`}
             </button>
           </div>
         )}

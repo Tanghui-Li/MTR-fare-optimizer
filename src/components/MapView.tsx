@@ -3,12 +3,12 @@ import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { stationCoordinates } from '../data/stationCoordinates';
-import { lineColors, lineNames } from '../data/lineColors';
+import { lineColors, getLocalizedLineName } from '../data/lineColors';
 import { lineSegments } from '../data/lineSegments';
 import { getStationLines } from '../services/mtrApi';
 import linesData from '../lines.json';
 import stationsData from '../stations.json';
-import { StationMap, DetailedSegment } from '../types';
+import { StationMap, DetailedSegment, Locale } from '../types';
 import StationPopup from './StationPopup';
 import BusLayer from './BusLayer';
 import BusStopLayer from './BusStopLayer';
@@ -16,6 +16,8 @@ import LRTStationLayer from './LRTStationLayer';
 import LRTPopup from './LRTPopup';
 import AccessibilityFilter from './AccessibilityFilter';
 import accessibilityRaw from '../data/accessibilityData.json';
+import { getRouteNodeCoordinate } from '../routePlanner';
+import { t } from '../i18n';
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
@@ -29,6 +31,7 @@ interface MapViewProps {
   routeSegments?: DetailedSegment[];
   originId?: string | null;
   destinationId?: string | null;
+  locale: Locale;
 }
 
 /** Sub-component that handles fitBounds when route changes */
@@ -50,7 +53,7 @@ function RouteFitter({ routeSegments }: { routeSegments?: DetailedSegment[] }) {
     const coords: [number, number][] = [];
     for (const seg of routeSegments) {
       for (const step of seg.path) {
-        const c = stationCoordinates[step.stationId];
+        const c = getRouteNodeCoordinate(step.stationId) || stationCoordinates[step.stationId];
         if (c) coords.push([c.lat, c.lng]);
       }
     }
@@ -64,7 +67,7 @@ function RouteFitter({ routeSegments }: { routeSegments?: DetailedSegment[] }) {
   return null;
 }
 
-export default function MapView({ routeSegments, originId, destinationId }: MapViewProps) {
+export default function MapView({ routeSegments, originId, destinationId, locale }: MapViewProps) {
   const [showBuses, setShowBuses] = useState(true);
   const [showBusStops, setShowBusStops] = useState(true);
   const [showLRT, setShowLRT] = useState(true);
@@ -124,33 +127,50 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
 
     for (let si = 0; si < routeSegments.length; si++) {
       const seg = routeSegments[si];
-      // Group consecutive steps on the same line into one polyline
-      let currentLine = seg.path[0]?.lineCode || '';
+      if (seg.path.length < 2) continue;
+
+      // Color each edge by the lineCode at its from-step to avoid switching one stop early.
+      let currentLine = '';
       let currentPositions: [number, number][] = [];
 
-      for (let i = 0; i < seg.path.length; i++) {
-        const step = seg.path[i];
-        const coord = stationCoordinates[step.stationId];
-        if (!coord) continue;
+      for (let i = 0; i < seg.path.length - 1; i++) {
+        const fromStep = seg.path[i];
+        const toStep = seg.path[i + 1];
+        const fromCoord = getRouteNodeCoordinate(fromStep.stationId) || stationCoordinates[fromStep.stationId];
+        const toCoord = getRouteNodeCoordinate(toStep.stationId) || stationCoordinates[toStep.stationId];
+        if (!fromCoord || !toCoord) continue;
 
-        if (step.lineCode !== currentLine && currentPositions.length > 0) {
-          // Line changed — push the accumulated polyline
-          result.push({
-            segIndex: si,
-            lineCode: currentLine,
-            positions: [...currentPositions],
-            isWalk: currentLine === 'WALK',
-          });
-          // Start new polyline (include last point of previous for continuity)
-          currentPositions = [currentPositions[currentPositions.length - 1]];
-          currentLine = step.lineCode;
+        const edgeLine = fromStep.lineCode || toStep.lineCode || 'TRANSFER';
+
+        if (!currentLine) {
+          currentLine = edgeLine;
+          currentPositions = [
+            [fromCoord.lat, fromCoord.lng],
+            [toCoord.lat, toCoord.lng],
+          ];
+          continue;
         }
 
-        currentPositions.push([coord.lat, coord.lng]);
+        if (edgeLine !== currentLine) {
+          if (currentPositions.length > 1) {
+            result.push({
+              segIndex: si,
+              lineCode: currentLine,
+              positions: [...currentPositions],
+              isWalk: currentLine === 'WALK',
+            });
+          }
+          currentLine = edgeLine;
+          currentPositions = [
+            [fromCoord.lat, fromCoord.lng],
+            [toCoord.lat, toCoord.lng],
+          ];
+        } else {
+          currentPositions.push([toCoord.lat, toCoord.lng]);
+        }
       }
 
-      // Push the last accumulated polyline
-      if (currentPositions.length > 1) {
+      if (currentLine && currentPositions.length > 1) {
         result.push({
           segIndex: si,
           lineCode: currentLine,
@@ -226,7 +246,7 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
             <span className="map-toggle-slider" />
             <span className="map-toggle-label">
               <span className="lrt-icon-dot" />
-              輕鐵站
+              {t(locale, 'mapLightRail')}
             </span>
           </label>
           <label className="map-toggle">
@@ -238,7 +258,7 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
             <span className="map-toggle-slider" />
             <span className="map-toggle-label">
               <span className="bus-stop-icon-dot" />
-              巴士站點
+              {t(locale, 'mapBusStops')}
             </span>
           </label>
           <label className="map-toggle">
@@ -250,7 +270,7 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
             <span className="map-toggle-slider" />
             <span className="map-toggle-label">
               <span className="bus-icon-dot" />
-              巴士實時
+              {t(locale, 'mapLiveBuses')}
             </span>
           </label>
         </div>
@@ -258,7 +278,7 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
           {Object.entries(lineColors).map(([code, color]) => (
             <span key={code} className="legend-item">
               <span className="legend-dot" style={{ backgroundColor: color }} />
-              <span className="legend-text">{lineNames[code]?.zh || code}</span>
+              <span className="legend-text">{getLocalizedLineName(code, locale)}</span>
             </span>
           ))}
         </div>
@@ -284,7 +304,7 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
         {/* HK Government Basemap Tiles (Lands Department) */}
         <TileLayer
           url="https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/WGS84/{z}/{x}/{y}.png"
-          attribution='地圖來自 <a href="https://www.landsd.gov.hk/" target="_blank">地政總署</a>'
+          attribution={`${t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank">${t(locale, 'landsDepartment')}</a>`}
           maxZoom={19}
           minZoom={9}
         />
@@ -301,6 +321,7 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
           <Polyline
             key={`${lineCode}-${from}-${to}`}
             positions={positions}
+            interactive={false}
             pathOptions={{
               color: lineColors[lineCode] || '#888',
               weight: 4,
@@ -311,12 +332,10 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
           >
             <Tooltip sticky className="line-tooltip">
               <span style={{ color: lineColors[lineCode] || '#888', fontWeight: 600 }}>
-                {lineNames[lineCode]?.zh || lineCode}
+                {getLocalizedLineName(lineCode, locale)}
               </span>
               {' '}
-              <span style={{ opacity: 0.6 }}>
-                {lineNames[lineCode]?.en || ''}
-              </span>
+
             </Tooltip>
           </Polyline>
         ))}
@@ -326,6 +345,7 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
           <Polyline
             key={`route-${rp.segIndex}-${idx}`}
             positions={rp.positions}
+            interactive={false}
             pathOptions={{
               color: rp.isWalk ? '#6b7280' : (lineColors[rp.lineCode] || '#3b82f6'),
               weight: 7,
@@ -407,36 +427,37 @@ export default function MapView({ routeSegments, originId, destinationId }: MapV
                   <span style={{ opacity: 0.7, fontSize: '11px' }}>
                     {stations[marker.id]?.en || ''}
                   </span>
-                  {role === 'origin' && <><br /><span style={{ color: '#16a34a', fontWeight: 600, fontSize: '11px' }}>🟢 起點</span></>}
-                  {role === 'destination' && <><br /><span style={{ color: '#dc2626', fontWeight: 600, fontSize: '11px' }}>🔴 終點</span></>}
-                  {role === 'exitReenter' && <><br /><span style={{ color: '#ea580c', fontWeight: 600, fontSize: '11px' }}>🟠 出閘再入閘</span></>}
+                  {role === 'origin' && <><br /><span style={{ color: '#16a34a', fontWeight: 600, fontSize: '11px' }}>🟢 {locale === 'en' ? 'Origin' : locale === 'zh-Hans' ? '起点' : '起點'}</span></>}
+                  {role === 'destination' && <><br /><span style={{ color: '#dc2626', fontWeight: 600, fontSize: '11px' }}>🔴 {locale === 'en' ? 'Destination' : locale === 'zh-Hans' ? '终点' : '終點'}</span></>}
+                  {role === 'exitReenter' && <><br /><span style={{ color: '#ea580c', fontWeight: 600, fontSize: '11px' }}>🟠 {locale === 'en' ? 'Exit & Re-enter' : locale === 'zh-Hans' ? '出闸再入闸' : '出閘再入閘'}</span></>}
                 </div>
               </Tooltip>
               <StationPopup
                 stationId={marker.id}
                 station={stations[marker.id]}
                 lines={marker.allLines}
+                locale={locale}
               />
             </CircleMarker>
           );
         })}
 
         {/* MTR Bus Layer (live vehicles) */}
-        {showBuses && <BusLayer />}
+        {showBuses && <BusLayer locale={locale} />}
 
         {/* MTR Bus Stop Locations */}
-        {showBusStops && <BusStopLayer />}
+        {showBusStops && <BusStopLayer locale={locale} />}
 
         {/* LRT Station Markers (Static + Live Popup) */}
-        {showLRT && <LRTStationLayer />}
+        {showLRT && <LRTStationLayer locale={locale} />}
       </MapContainer>
 
       {/* Data Source Attribution */}
       <div className="map-attribution">
-        數據來源：
-        <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">香港政府資料一線通</a>
+        {t(locale, 'dataSourcesLabel')}
+        <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>
         {' | '}
-        <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">地理空間數據平台</a>
+        <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>
       </div>
     </div>
   );

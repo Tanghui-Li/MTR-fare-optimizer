@@ -1,10 +1,15 @@
-import { CircleMarker, Tooltip, LayerGroup } from 'react-leaflet';
+import { CircleMarker, Tooltip } from 'react-leaflet';
 import LRTPopup from './LRTPopup';
 import lrtStationsData from '../data/lrtStations.json';
+import { Locale } from '../types';
 
 const lrtStations = lrtStationsData as Record<string, { id: string; lat: number; lng: number; zh: string; en: string }>;
 
-export default function LRTStationLayer() {
+interface LRTStationLayerProps {
+  locale: Locale;
+}
+
+export default function LRTStationLayer({ locale }: LRTStationLayerProps) {
   if (!lrtStations) return null;
 
   return (
@@ -23,12 +28,12 @@ export default function LRTStationLayer() {
         >
           <Tooltip direction="top" offset={[0, -5]} className="station-tooltip">
             <div style={{ textAlign: 'center' }}>
-              <strong style={{ fontSize: '12px' }}>{stop.zh}</strong>
-              <div style={{ fontSize: '10px', opacity: 0.7 }}>{stop.en}</div>
-              <div style={{ fontSize: '9px', opacity: 0.5, marginTop: '2px' }}>Light Rail Station</div>
+              <strong style={{ fontSize: '12px' }}>{locale === 'en' ? stop.en : stop.zh}</strong>
+              <div style={{ fontSize: '10px', opacity: 0.7 }}>{locale === 'en' ? stop.zh : stop.en}</div>
+              <div style={{ fontSize: '9px', opacity: 0.5, marginTop: '2px' }}>{locale === 'en' ? 'Light Rail Station' : locale === 'zh-Hans' ? '轻铁站' : '輕鐵站'}</div>
             </div>
           </Tooltip>
-          <LRTPopup stationId={stop.id} stationName={stop.zh} />
+          <LRTPopup stationId={stop.id} stationName={locale === 'en' ? stop.en : stop.zh} locale={locale} />
         </CircleMarker>
       ))}
     </>

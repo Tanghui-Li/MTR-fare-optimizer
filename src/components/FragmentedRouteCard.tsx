@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, PathStep } from '../types'
-import { lineColors, lineNames } from '../data/lineColors'
+import { useEffect, useState } from 'react'
+import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, PathStep, Locale } from '../types'
+import { lineColors, getLocalizedLineName } from '../data/lineColors'
 import { ArrowRight, MapPin, Zap, LogIn, ChevronDown, ChevronRight } from 'lucide-react'
+import { formatCurrency, t } from '../i18n'
 
 interface FragmentedRouteCardProps {
   routeResult: RouteResult
@@ -10,6 +11,7 @@ interface FragmentedRouteCardProps {
   activeMatrix: FareMatrix
   detailedSegments: DetailedSegment[]
   customLabel?: string
+  locale: Locale
 }
 
 // Stations that should be collapsed into one line if adjacent
@@ -23,37 +25,44 @@ const COLLAPSE_GROUPS: { [id: string]: string } = {
 /** Group consecutive PathSteps by lineCode for display */
 function groupByLine(path: PathStep[]): { lineCode: string; stations: string[] }[] {
   if (path.length === 0) return [];
-  
+  if (path.length === 1) {
+    return [{ lineCode: path[0].lineCode, stations: [path[0].stationId] }];
+  }
+
   const groups: { lineCode: string; stations: string[] }[] = [];
-  let currentGroup = { lineCode: path[0].lineCode, stations: [path[0].stationId] };
-  
-  for (let i = 1; i < path.length; i++) {
-    const step = path[i];
-    if (step.lineCode === currentGroup.lineCode) {
-      currentGroup.stations.push(step.stationId);
+  let currentLine = path[0].lineCode;
+  let currentStations = [path[0].stationId, path[1].stationId];
+
+  for (let i = 1; i < path.length - 1; i++) {
+    const edgeLine = path[i].lineCode;
+    const nextStation = path[i + 1].stationId;
+
+    if (edgeLine === currentLine) {
+      currentStations.push(nextStation);
     } else {
-      // Line changed!
-      // The current station 'step.stationId' is the first station of the NEW line,
-      // but it's also where the OLD line conceptually ends for the user.
-      // However, to avoid drawing lines that shouldn't exist, we must be careful.
-      
-      // If it's a walk, we definitely want to start a new group.
-      groups.push(currentGroup);
-      
-      // Start new group with the SAME station as the end of the previous one
-      // if they are at the same physical location (or it's a transfer)
-      // Actually, in our BFS, 'step.stationId' is already the station we just reached.
-      const lastStationId = currentGroup.stations[currentGroup.stations.length - 1];
-      currentGroup = { lineCode: step.lineCode, stations: [lastStationId, step.stationId] };
+      groups.push({ lineCode: currentLine, stations: currentStations });
+      // Start the new line group from the transfer station itself.
+      currentLine = edgeLine;
+      currentStations = [path[i].stationId, nextStation];
     }
   }
-  groups.push(currentGroup);
+
+  groups.push({ lineCode: currentLine, stations: currentStations });
   
   return groups;
 }
 
-const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, detailedSegments, customLabel }: FragmentedRouteCardProps) => {
+const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, detailedSegments, customLabel, locale }: FragmentedRouteCardProps) => {
   const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    setExpandedSegments(new Set(detailedSegments.map((_, idx) => idx)));
+  }, [detailedSegments]);
+
+  const displayName = (station?: { zh: string; en: string }) => {
+    if (!station) return '';
+    return locale === 'en' ? station.en : station.zh;
+  };
 
   const toggleSegment = (index: number) => {
     setExpandedSegments(prev => {
@@ -86,10 +95,10 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, 
       <div className="route-card-inner">
         <div className="route-card-header">
           <div>
-            <h3 className="route-card-label">{customLabel || 'Optimized Route'}</h3>
+            <h3 className="route-card-label">{customLabel || t(locale, 'optimizedRoute')}</h3>
             <div className="route-card-fare-row">
-              <span className="route-card-fare">HK$ {routeResult.totalFare.toFixed(1)}</span>
-              <span className="route-card-fare-badge">Best {ticketType} Price</span>
+              <span className="route-card-fare">{formatCurrency(routeResult.totalFare)}</span>
+              <span className="route-card-fare-badge">{t(locale, 'bestPrice')}</span>
             </div>
           </div>
           <Zap className="w-7 h-7 text-yellow-400 fill-yellow-400" />
@@ -115,11 +124,10 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, 
                   <div className="route-stop route-stop-terminal">
                     <div className="route-stop-dot origin" />
                     <div className="route-stop-info">
-                      <h4>{fromStation?.zh}{mergedFrom && stations[mergedFrom] ? ` / ${stations[mergedFrom].zh}` : ''}</h4>
-                      <p>{fromStation?.en}{mergedFrom && stations[mergedFrom] ? ` / ${stations[mergedFrom].en}` : ''}</p>
+                      <h4>{displayName(fromStation)}{mergedFrom && stations[mergedFrom] ? ` / ${displayName(stations[mergedFrom])}` : ''}</h4>
                       <div className="route-stop-action enter">
                         <LogIn className="w-3 h-3" />
-                        Enter System
+                        {t(locale, 'enterSystem')}
                       </div>
                     </div>
                   </div>
@@ -138,12 +146,12 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, 
                           className="route-segment-line-tag"
                           style={{ backgroundColor: lineColors[g.lineCode] || '#666' }}
                         >
-                          {lineNames[g.lineCode]?.zh || g.lineCode}
+                          {getLocalizedLineName(g.lineCode, locale)}
                         </span>
                       ))}
                     </div>
                     <span className="route-segment-info-text">
-                      {totalStops} 站 · {transferCount > 0 ? `${transferCount} 次換乘` : '直達'}
+                      {totalStops} {t(locale, 'routeCount')} · {transferCount > 0 ? `${transferCount} ${t(locale, 'transferCount')}` : t(locale, 'direct')}
                     </span>
                     {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </button>
@@ -159,10 +167,7 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, 
                               style={{ backgroundColor: lineColors[group.lineCode] || '#666' }}
                             />
                             <span className="route-line-group-name">
-                              {lineNames[group.lineCode]?.zh || group.lineCode}
-                              <span className="route-line-group-name-en">
-                                {lineNames[group.lineCode]?.en || ''}
-                              </span>
+                              {getLocalizedLineName(group.lineCode, locale)}
                             </span>
                           </div>
                           <div className="route-line-stations">
@@ -176,8 +181,7 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, 
                                     style={{ borderColor: lineColors[group.lineCode] || '#666' }}
                                   />
                                   <span className="route-line-station-name">
-                                    {st.zh}
-                                    <span className="route-line-station-en">{st.en}</span>
+                                    {displayName(st)}
                                   </span>
                                 </div>
                               );
@@ -193,20 +197,19 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, 
                 <div className={`route-stop ${isLastSeg ? 'route-stop-terminal' : 'route-stop-transfer'}`}>
                   <div className={`route-stop-dot ${isLastSeg ? 'destination' : 'exit-reenter'}`} />
                   <div className="route-stop-info">
-                    <h4>{toStation?.zh}{mergedTo && stations[mergedTo] ? ` / ${stations[mergedTo].zh}` : ''}</h4>
-                    <p>{toStation?.en}{mergedTo && stations[mergedTo] ? ` / ${stations[mergedTo].en}` : ''}</p>
+                    <h4>{displayName(toStation)}{mergedTo && stations[mergedTo] ? ` / ${displayName(stations[mergedTo])}` : ''}</h4>
                     <div className="route-stop-fare">
-                      <span className="route-stop-fare-label">{isLastSeg ? 'Final Exit' : 'Exit & Re-enter'}</span>
+                      <span className="route-stop-fare-label">{isLastSeg ? t(locale, 'finalExit') : t(locale, 'exitReenter')}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                      <span className="route-stop-fare-amount">HK$ {seg.fare.toFixed(1)}</span>
+                      <span className="route-stop-fare-amount">{formatCurrency(seg.fare)}</span>
                       {ticketType === 'octopus' && seg.fare === 0 && (
-                        <span className="route-stop-free-badge">免費港鐵接駁服務 🎁</span>
+                        <span className="route-stop-free-badge">{t(locale, 'aelFreeShuttle')} 🎁</span>
                       )}
                     </div>
                     {isLastSeg && (
                       <div className="route-stop-action complete">
                         <MapPin className="w-3 h-3" />
-                        Trip Complete
+                        {t(locale, 'tripComplete')}
                       </div>
                     )}
                   </div>

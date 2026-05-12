@@ -27,9 +27,12 @@ export interface FareMatrix {
 export interface RouteResult {
   totalFare: number;
   route: string[]; // 按顺序排列的 Station ID 数组，例如 ["CEN", "MKK", "SHT"]
+  segments?: DetailedSegment[];
 }
 
 export type TicketType = 'octopus' | 'single';
+export type Locale = 'zh-Hant' | 'en' | 'zh-Hans';
+export type TransportMode = 'MTR' | 'AEL' | 'LRT' | 'NWBUS' | 'TAIPOBUS' | 'TRANSFER';
 
 export interface UnifiedFareMatrix {
   octopus: FareMatrix;
@@ -50,6 +53,7 @@ export interface RouteSegment {
 export interface PathStep {
   stationId: string;
   lineCode: string;  // 乘坐哪条线到达/离开此站（首站为出发线路）
+  mode?: TransportMode;
 }
 
 /** 一段完整路径（两次出入闸之间） */
@@ -58,4 +62,6 @@ export interface DetailedSegment {
   to: string;          // 出闸站 ID
   fare: number;
   path: PathStep[];    // 站间详细路径（含所有途经站）
+  lineLabel?: string;
+  mode?: TransportMode;
 }
