@@ -19,6 +19,7 @@ function App() {
   const [ticketType, setTicketType] = useState<TicketType>('octopus')
   const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
+  const [mobilePanelExpanded, setMobilePanelExpanded] = useState(false)
   
   const [displayedOriginId, setDisplayedOriginId] = useState<string | null>(null)
   const [displayedDestinationId, setDisplayedDestinationId] = useState<string | null>(null)
@@ -56,6 +57,12 @@ function App() {
     }
   }, [originId, destinationId, ticketType])
 
+  useEffect(() => {
+    if (routeResult) {
+      setMobilePanelExpanded(true)
+    }
+  }, [routeResult])
+
   return (
     <div className="app-root">
       {/* Top Navigation */}
@@ -88,7 +95,19 @@ function App() {
       {/* Unified Layout: Left Panel + Map */}
       <div className="unified-layout">
         {/* Left Panel: Controls + Results */}
-        <div className="left-panel">
+        <div className={`left-panel ${mobilePanelExpanded ? 'mobile-sheet-expanded' : ''}`}>
+          <button
+            type="button"
+            className="mobile-sheet-toggle"
+            onClick={() => setMobilePanelExpanded((expanded) => !expanded)}
+            aria-expanded={mobilePanelExpanded}
+          >
+            <span className="mobile-sheet-grip" />
+            <span className="mobile-sheet-title">{t(locale, 'routePanel')}</span>
+            <span className="mobile-sheet-state">
+              {mobilePanelExpanded ? t(locale, 'collapsePanel') : t(locale, 'expandPanel')}
+            </span>
+          </button>
           <div className="left-panel-inner">
             {/* Compact Header */}
             <header className="compact-header">
