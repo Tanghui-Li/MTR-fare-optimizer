@@ -52,6 +52,8 @@
 
 ### 3. 统一设计语言
 
+状态：已处理第一步。
+
 建议采用：
 
 - `Material 3-inspired Transit UI`
@@ -61,6 +63,11 @@
 - 借鉴 Material 3 的 Surface 层级、Bottom Sheet、Segmented Control、Filter Chips、焦点态、状态反馈。
 - 不完整照搬 Material 3 默认视觉。
 - 保留港铁/交通工具特征：克制、清晰、可扫描，线路色只用于线路和路线标签。
+
+已处理：
+
+- `src/index.css` 已加入基础设计 token，覆盖页面背景、Surface、文字层级、边框、圆角、阴影和焦点色。
+- 核心页面根容器、导航、桌面/移动面板、地图控制条已开始使用 token，降低后续样式漂移风险。
 
 避免：
 
