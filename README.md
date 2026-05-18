@@ -120,6 +120,7 @@ npm run build
 每次修改后至少运行：
 
 ```bash
+npm run test
 npm run lint
 npm run build
 ```
