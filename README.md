@@ -57,6 +57,37 @@ Project/
   * **动态实时数据**：使用 Fetch API 直接与 `data.gov.hk` 的 CKAN REST API 交互（无第三方商业 API）。
 * **UI 样式**：自定义 Vanilla CSS 配合现代扁平化与半透明玻璃态设计。
 
+## 📊 数据文件说明
+
+本项目依赖仓库内的 `opendata/` 目录。该目录保存来自香港政府公开数据和港铁开放资料的原始 CSV、数据规格 PDF 与接口文档。前端构建会直接读取部分 CSV，因此该目录不是可选资源。
+
+当前构建所需的关键 CSV 包括：
+
+- `opendata/mtr_lines_and_stations.csv`
+- `opendata/mtr_lines_fares.csv`
+- `opendata/airport_express_fares.csv`
+- `opendata/light_rail_fares.csv`
+- `opendata/light_rail_routes_and_stops.csv`
+- `opendata/mtr_bus_fares.csv`
+- `opendata/mtr_bus_routes.csv`
+- `opendata/mtr_bus_stops.csv`
+- `opendata/barrier_free_facilities.csv`
+- `opendata/barrier_free_facility_category.csv`
+
+仓库中的 Python 脚本只负责处理本地 CSV，不会自动爬取或下载数据：
+
+- `clean_data.py`
+- `clean_stations.py`
+- `scratch/process_fares.py`
+- `scratch/process_lines.py`
+
+如果重新获取或更新开放数据，应先替换 `opendata/` 中对应文件，再运行相关处理脚本，并最后执行：
+
+```bash
+npm run lint
+npm run build
+```
+
 ## 🧑‍💻 小组协作指南 (How to run and contribute)
 
 1. **环境准备**
