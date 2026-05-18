@@ -1350,8 +1350,8 @@
     width: auto;
     min-width: 0;
     max-width: none;
-    height: 42vh;
-    height: 42dvh;
+    height: clamp(400px, 52vh, 500px);
+    height: clamp(400px, 52dvh, 500px);
     max-height: calc(100vh - 76px);
     max-height: calc(100dvh - 76px);
     border: 1px solid #e2e8f0;
@@ -1406,7 +1406,44 @@
   .left-panel-inner {
     height: calc(100% - 42px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 12px 10px 18px;
+  }
+
+  .control-panel-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .control-panel-card > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 14px;
+  }
+
+  .ticket-type-toggle button {
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .route-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .route-form-section > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px;
+  }
+
+  .route-form-fields > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 8px;
+  }
+
+  .swap-station-row {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
   }
 
   .right-panel {

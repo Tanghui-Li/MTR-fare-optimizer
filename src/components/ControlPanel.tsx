@@ -210,10 +210,10 @@ const ControlPanel = ({
   }
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 space-y-6">
+    <div className="control-panel-card bg-white p-6 rounded-2xl shadow-xl border border-gray-100 space-y-6">
       {/* Ticket Type Toggle */}
       <div className="flex justify-center">
-        <div className="bg-gray-100 p-1 rounded-xl flex gap-1 w-full max-w-sm">
+        <div className="ticket-type-toggle bg-gray-100 p-1 rounded-xl flex gap-1 w-full max-w-sm">
           <button
             onClick={() => onTicketTypeChange('octopus')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-bold text-sm transition-all ${
@@ -239,15 +239,15 @@ const ControlPanel = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative">
+      <div className="route-form-grid grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative">
         {/* Origin Section */}
-        <div className="space-y-4">
+        <div className="route-form-section space-y-4">
           <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
             <div className="w-2 h-6 bg-slate-900 rounded-full" />
             <h3>{t(locale, 'startingPoint')}</h3>
           </div>
           
-          <div className="space-y-3">
+          <div className="route-form-fields space-y-3">
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'selectLine')}</label>
               <select 
@@ -277,7 +277,7 @@ const ControlPanel = ({
         </div>
 
         {/* Swap Button */}
-        <div className="flex justify-center items-center md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-10 my-4 md:my-0">
+        <div className="swap-station-row flex justify-center items-center md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-10 my-4 md:my-0">
           <button 
             onClick={handleSwap}
             className="bg-white border-2 border-gray-100 p-2.5 rounded-full shadow-lg hover:shadow-xl hover:border-gray-200 transition-all hover:rotate-180 duration-300"
@@ -288,13 +288,13 @@ const ControlPanel = ({
         </div>
 
         {/* Destination Section */}
-        <div className="space-y-4">
+        <div className="route-form-section space-y-4">
           <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
             <div className="w-2 h-6 bg-slate-900 rounded-full" />
             <h3>{t(locale, 'finalDestination')}</h3>
           </div>
 
-          <div className="space-y-3">
+          <div className="route-form-fields space-y-3">
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'selectLine')}</label>
               <select 
