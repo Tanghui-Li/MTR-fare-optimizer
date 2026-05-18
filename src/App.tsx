@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, type PointerEvent } from 'react'
 import ControlPanel from './components/ControlPanel'
 import RouteVisualizer from './components/RouteVisualizer'
 import MapView from './components/MapView'
@@ -20,6 +20,9 @@ function App() {
   const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
   const [mobilePanelExpanded, setMobilePanelExpanded] = useState(false)
+  const mobileSheetDragStartY = useRef<number | null>(null)
+  const mobileSheetDragged = useRef(false)
+  const suppressNextMobileSheetClick = useRef(false)
   
   const [displayedOriginId, setDisplayedOriginId] = useState<string | null>(null)
   const [displayedDestinationId, setDisplayedDestinationId] = useState<string | null>(null)
@@ -63,6 +66,48 @@ function App() {
     }
   }, [routeResult])
 
+  const handleMobileSheetPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+
+    mobileSheetDragStartY.current = event.clientY
+    mobileSheetDragged.current = false
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handleMobileSheetPointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    if (mobileSheetDragStartY.current === null) return
+
+    const deltaY = event.clientY - mobileSheetDragStartY.current
+    if (Math.abs(deltaY) > 8) {
+      mobileSheetDragged.current = true
+    }
+  }
+
+  const handleMobileSheetPointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
+    if (mobileSheetDragStartY.current === null) return
+
+    const deltaY = event.clientY - mobileSheetDragStartY.current
+    if (Math.abs(deltaY) > 32) {
+      setMobilePanelExpanded(deltaY < 0)
+      suppressNextMobileSheetClick.current = true
+    }
+
+    mobileSheetDragStartY.current = null
+    mobileSheetDragged.current = false
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }
+
+  const handleMobileSheetClick = () => {
+    if (suppressNextMobileSheetClick.current) {
+      suppressNextMobileSheetClick.current = false
+      return
+    }
+
+    setMobilePanelExpanded((expanded) => !expanded)
+  }
+
   return (
     <div className="app-root">
       {/* Top Navigation */}
@@ -99,7 +144,11 @@ function App() {
           <button
             type="button"
             className="mobile-sheet-toggle"
-            onClick={() => setMobilePanelExpanded((expanded) => !expanded)}
+            onPointerDown={handleMobileSheetPointerDown}
+            onPointerMove={handleMobileSheetPointerMove}
+            onPointerUp={handleMobileSheetPointerEnd}
+            onPointerCancel={handleMobileSheetPointerEnd}
+            onClick={handleMobileSheetClick}
             aria-expanded={mobilePanelExpanded}
           >
             <span className="mobile-sheet-grip" />

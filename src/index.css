@@ -1399,6 +1399,8 @@
     color: #0f172a;
     font-family: inherit;
     cursor: pointer;
+    touch-action: none;
+    user-select: none;
   }
 
   .mobile-sheet-grip {
