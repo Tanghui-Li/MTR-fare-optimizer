@@ -108,9 +108,9 @@
 }
 
 .left-panel {
-  width: 660px;
-  min-width: 570px;
-  max-width: 750px;
+  width: min(38vw, 520px);
+  min-width: 460px;
+  max-width: 520px;
   flex-shrink: 0;
   background: #f8fafc;
   border-right: 1px solid #e2e8f0;
