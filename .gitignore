@@ -32,7 +32,3 @@ __pycache__/
 .venv/
 venv/
 env/
-
-# Project Specific
-# 原始数据 (隔离官方庞大且不需要入库的文件)
-opendata/
