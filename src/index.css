@@ -1457,11 +1457,7 @@
   }
 
   .map-legend {
-    gap: 4px;
-  }
-
-  .legend-text {
-    font-size: 9px;
+    display: none;
   }
 
   .popup-station-name {
