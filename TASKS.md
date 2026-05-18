@@ -126,13 +126,13 @@
 当前问题：
 
 - `src/components/ControlPanel.tsx` 的 `SearchableDropdown` 已从 `div onClick` 改为按钮触发器和 `listbox/option` 结构。
-- 已补 `aria-expanded`、`aria-controls`、`aria-selected`，并支持 `Escape` 关闭。
-- 仍未替换为完整的 shadcn/Radix Combobox，方向键选项焦点管理还不是最终形态。
+- 已补 `aria-expanded`、`aria-controls`、`aria-selected`，并支持 `Escape` 关闭、方向键移动和 `Enter` 选择。
+- 仍未替换为完整的 shadcn/Radix Combobox，但键盘主路径已覆盖。
 
 建议：
 
 - 用 shadcn/Radix 的 `Command + Popover` 或等价 Combobox。
-- 支持键盘方向键、Enter 选择、Escape 关闭。
+- 长期可替换为 shadcn/Radix Combobox，减少自维护交互细节。
 - 加 `aria-expanded`、`aria-controls`、可见焦点态。
 
 ### 7. 降低地图首屏信息密度

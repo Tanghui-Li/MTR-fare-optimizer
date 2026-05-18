@@ -27,6 +27,7 @@ const accentStyles = {
 const SearchableDropdown = ({ label, options, value, onChange, placeholder, accentColor, locale }: SearchableDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerId = useId()
   const listboxId = useId()
@@ -42,6 +43,13 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
     return locale === 'en' ? station.en : station.zh
   }
   const noStationText = locale === 'en' ? 'No stations found' : locale === 'zh-Hans' ? '没有找到车站' : '找不到車站'
+  const activeOptionId = filteredOptions[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined
+
+  const selectStation = (id: string) => {
+    onChange(id)
+    setIsOpen(false)
+    setSearch('')
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,6 +60,10 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [search, isOpen])
 
   return (
     <div className="space-y-1 relative" ref={containerRef}>
@@ -91,11 +103,25 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                 autoFocus
                 type="text"
                 aria-label={locale === 'en' ? 'Search station' : locale === 'zh-Hans' ? '搜索车站' : '搜尋車站'}
+                aria-controls={listboxId}
+                aria-activedescendant={activeOptionId}
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:bg-white transition-colors"
                 placeholder={locale === 'en' ? 'Search station...' : locale === 'zh-Hans' ? '搜索车站...' : '搜尋車站...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault()
+                    setActiveIndex((index) => filteredOptions.length > 0 ? Math.min(index + 1, filteredOptions.length - 1) : 0)
+                  }
+                  if (event.key === 'ArrowUp') {
+                    event.preventDefault()
+                    setActiveIndex((index) => filteredOptions.length > 0 ? Math.max(index - 1, 0) : 0)
+                  }
+                  if (event.key === 'Enter' && filteredOptions[activeIndex]) {
+                    event.preventDefault()
+                    selectStation(filteredOptions[activeIndex].id)
+                  }
                   if (event.key === 'Escape') {
                     setIsOpen(false)
                   }
@@ -105,19 +131,17 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
           </div>
           <div id={listboxId} role="listbox" aria-labelledby={triggerId} className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
             {filteredOptions.length > 0 ? (
-              filteredOptions.map(s => (
+              filteredOptions.map((s, index) => (
                 <button
                   type="button"
                   role="option"
                   aria-selected={value === s.id}
+                  id={`${listboxId}-option-${index}`}
                   key={s.id}
-                  onClick={() => {
-                    onChange(s.id)
-                    setIsOpen(false)
-                    setSearch('')
-                  }}
+                  onClick={() => selectStation(s.id)}
+                  onMouseEnter={() => setActiveIndex(index)}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    value === s.id ? `${styles.bg} ${styles.text} font-bold` : 'hover:bg-gray-50'
+                    value === s.id || activeIndex === index ? `${styles.bg} ${styles.text} font-bold` : 'hover:bg-gray-50'
                   } w-full text-left`}
                 >
                   <div className="text-sm">{locale === 'en' ? s.en : s.zh}</div>
