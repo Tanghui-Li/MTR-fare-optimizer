@@ -17,6 +17,7 @@ import AccessibilityFilter from './AccessibilityFilter';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
 import { t } from '../i18n';
+import { SlidersHorizontal } from 'lucide-react';
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
@@ -70,6 +71,7 @@ export default function MapView({ routeSegments, originId, destinationId, locale
   const [showBuses, setShowBuses] = useState(false);
   const [showBusStops, setShowBusStops] = useState(false);
   const [showLRT, setShowLRT] = useState(false);
+  const [mobileLayerControlsOpen, setMobileLayerControlsOpen] = useState(false);
   // Accessibility filter: array of clauses; each clause is a set of item codes (OR); all clauses must match (AND/CNF)
   const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
 
@@ -235,7 +237,16 @@ export default function MapView({ routeSegments, originId, destinationId, locale
     <div className="map-container">
       {/* Map Controls Bar */}
       <div className="map-controls-bar">
-        <div className="map-control-group">
+        <button
+          type="button"
+          className="map-layer-toggle-button"
+          onClick={() => setMobileLayerControlsOpen((open) => !open)}
+          aria-expanded={mobileLayerControlsOpen}
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          {t(locale, 'mapLayers')}
+        </button>
+        <div className={`map-control-group ${mobileLayerControlsOpen ? 'mobile-open' : ''}`}>
           <label className="map-toggle">
             <input
               type="checkbox"
