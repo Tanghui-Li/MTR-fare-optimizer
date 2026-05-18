@@ -105,10 +105,39 @@ npm run build
    ```
    随后在浏览器中打开 `http://localhost:5173` 预览应用。
 
+   如需在局域网或容器环境中访问，请监听 `0.0.0.0`：
+   ```bash
+   npm run dev -- --host 0.0.0.0
+   ```
+
 4. **组件开发规范**
    - **地图图层**：所有地图上的点/线尽量封装为独立的 `<LayerGroup>` 组件（参考 `LRTStationLayer.tsx`），避免直接在 `MapView` 中堆砌导致 React-Leaflet 初始化渲染 Bug。
    - **API 调用**：请统一将新的 `fetch` 请求封装在 `src/services/mtrApi.ts` 中，使用强类型的 TypeScript 接口定义。
    - **样式修改**：统一样式表为 `index.css`，采用 BEM 命名或带作用域前缀的类名，避免样式污染。
+
+## ✅ 前端验证与视觉验收
+
+每次修改后至少运行：
+
+```bash
+npm run lint
+npm run build
+```
+
+当前仓库尚未引入自动化测试框架。涉及 UI、自适应或地图交互的改动，应额外做以下人工验收：
+
+- 桌面端 `1440x900`：左侧路线规划面板与右侧地图应同时可见，地图图层控制不应遮挡主导航。
+- 移动端 `390x844`：首屏应以地图为主，底部路线规划面板应能看到票种、起点和终点主表单。
+- 窄屏移动端 `360x740`：语言切换、地图图层开关、底部面板和下拉框不应相互覆盖。
+- 车站下拉：鼠标、触控、方向键、Enter、Escape 均应能完成主路径操作。
+- 多语言：繁体中文、英文、简体中文切换后，导航、路线规划、无障碍筛选文案应同步更新。
+
+可用 Playwright CLI 生成视觉检查截图：
+
+```bash
+npx playwright screenshot --browser=chromium --viewport-size=390,844 http://127.0.0.1:5173/ /tmp/mtr-mobile.png
+npx playwright screenshot --browser=chromium --viewport-size=1440,900 http://127.0.0.1:5173/ /tmp/mtr-desktop.png
+```
 
 ## ✅ 近期更新日志 (Change Log)
 * 修复了轻铁站按钮需二次切换才能显示的 Leaflet 生命周期 Bug。
