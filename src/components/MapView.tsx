@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useMemo, useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -10,9 +10,6 @@ import linesData from '../lines.json';
 import stationsData from '../stations.json';
 import { StationMap, DetailedSegment, Locale } from '../types';
 import StationPopup from './StationPopup';
-import BusLayer from './BusLayer';
-import BusStopLayer from './BusStopLayer';
-import LRTStationLayer from './LRTStationLayer';
 import AccessibilityFilter from './AccessibilityFilter';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
@@ -26,6 +23,9 @@ const accessibilityData = accessibilityRaw as {
 
 const stations = stationsData as StationMap;
 const lines = linesData as Record<string, { name: { zh: string; en: string }; stations: string[] }>;
+const BusLayer = lazy(() => import('./BusLayer'));
+const BusStopLayer = lazy(() => import('./BusStopLayer'));
+const LRTStationLayer = lazy(() => import('./LRTStationLayer'));
 
 interface MapViewProps {
   routeSegments?: DetailedSegment[];
@@ -453,14 +453,16 @@ export default function MapView({ routeSegments, originId, destinationId, locale
           );
         })}
 
-        {/* MTR Bus Layer (live vehicles) */}
-        {showBuses && <BusLayer locale={locale} />}
+        <Suspense fallback={null}>
+          {/* MTR Bus Layer (live vehicles) */}
+          {showBuses && <BusLayer locale={locale} />}
 
-        {/* MTR Bus Stop Locations */}
-        {showBusStops && <BusStopLayer locale={locale} />}
+          {/* MTR Bus Stop Locations */}
+          {showBusStops && <BusStopLayer locale={locale} />}
 
-        {/* LRT Station Markers (Static + Live Popup) */}
-        {showLRT && <LRTStationLayer locale={locale} />}
+          {/* LRT Station Markers (Static + Live Popup) */}
+          {showLRT && <LRTStationLayer locale={locale} />}
+        </Suspense>
       </MapContainer>
 
       {/* Data Source Attribution */}
