@@ -24,7 +24,6 @@ function App() {
   const [displayedDestinationId, setDisplayedDestinationId] = useState<string | null>(null)
   const [displayedTicketType, setDisplayedTicketType] = useState<TicketType>('octopus')
   const [directFare, setDirectFare] = useState<number>(0)
-  const [activeMatrix, setActiveMatrix] = useState<FareMatrix | null>(null)
 
   // Route visualization state
   const [routeMode, setRouteMode] = useState<RouteMode>('optimized')
@@ -38,7 +37,7 @@ function App() {
 
   useEffect(() => {
     if (originId && destinationId) {
-      let matrixToUse: FareMatrix = JSON.parse(JSON.stringify(rawFareMatrix[ticketType]));
+      const matrixToUse: FareMatrix = JSON.parse(JSON.stringify(rawFareMatrix[ticketType]));
       const optimizedResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'optimized')
       const boringResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'boring')
 
@@ -47,13 +46,11 @@ function App() {
       setDisplayedDestinationId(destinationId)
       setDisplayedTicketType(ticketType)
       setDirectFare(boringResult.totalFare)
-      setActiveMatrix(matrixToUse)
       setOptimizedSegments(optimizedResult.segments || [])
       setBoringSegments(boringResult.segments || [])
 
     } else {
       setRouteResult(null)
-      setActiveMatrix(null)
       setOptimizedSegments([])
       setBoringSegments([])
     }
@@ -78,6 +75,7 @@ function App() {
                   key={option.value}
                   className={`lang-switcher-btn ${locale === option.value ? 'active' : ''}`}
                   onClick={() => setLocale(option.value)}
+                  aria-pressed={locale === option.value}
                 >
                   {option.label}
                 </button>
@@ -99,7 +97,6 @@ function App() {
             </header>
             
             <ControlPanel 
-              stations={stations}
               originId={originId}
               destinationId={destinationId}
               ticketType={ticketType}
@@ -109,15 +106,12 @@ function App() {
               locale={locale}
             />
 
-            {routeResult && displayedOriginId && displayedDestinationId && activeMatrix && (
+            {routeResult && displayedOriginId && displayedDestinationId && (
               <RouteVisualizer 
                 routeResult={routeResult} 
                 stations={stations}
                 directFare={directFare}
-                originId={displayedOriginId}
-                destinationId={displayedDestinationId}
                 ticketType={displayedTicketType}
-                activeMatrix={activeMatrix}
                 routeMode={routeMode}
                 onRouteModeChange={setRouteMode}
                 optimizedSegments={optimizedSegments}
@@ -125,9 +119,6 @@ function App() {
                 locale={locale}
               />
             )}
-            <div style={{ textAlign: 'center', padding: '20px', opacity: 0.3, fontSize: '10px' }}>
-              UI Version: 2.1.0-neutral-grey
-            </div>
           </div>
         </div>
 

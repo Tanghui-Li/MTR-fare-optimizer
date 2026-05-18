@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { StationMap, TicketType } from '../types'
+import { useState, useRef, useEffect, useId } from 'react'
+import { TicketType } from '../types'
 import { Search, CreditCard, Ticket, ChevronDown, ArrowRightLeft } from 'lucide-react'
 import { getLineFilterOptions, getSelectableStations, getLocalizedLineDefinitionLabel } from '../data/unifiedNetwork'
 import { Locale } from '../types'
@@ -28,6 +28,8 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerId = useId()
+  const listboxId = useId()
   
   const styles = accentStyles[accentColor as keyof typeof accentStyles]
 
@@ -39,6 +41,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
     if (!station) return ''
     return locale === 'en' ? station.en : station.zh
   }
+  const noStationText = locale === 'en' ? 'No stations found' : locale === 'zh-Hans' ? '没有找到车站' : '找不到車站'
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,9 +55,23 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
 
   return (
     <div className="space-y-1 relative" ref={containerRef}>
-      <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{label}</label>
-      <div 
+      <label htmlFor={triggerId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{label}</label>
+      <button
+        id={triggerId}
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            setIsOpen(true)
+          }
+          if (event.key === 'Escape') {
+            setIsOpen(false)
+          }
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={listboxId}
         className={`w-full p-3 bg-gray-50 border-2 rounded-xl cursor-pointer flex items-center justify-between transition-all ${
           isOpen ? `${styles.border} ring-2 ${styles.ring}` : 'border-gray-100 hover:border-gray-200'
         }`}
@@ -63,7 +80,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
           {selectedStation ? stationText(selectedStation) : placeholder}
         </span>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
+      </button>
 
       {isOpen && (
         <div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-900 overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -73,17 +90,26 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
               <input 
                 autoFocus
                 type="text"
+                aria-label={locale === 'en' ? 'Search station' : locale === 'zh-Hans' ? '搜索车站' : '搜尋車站'}
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:bg-white transition-colors"
                 placeholder={locale === 'en' ? 'Search station...' : locale === 'zh-Hans' ? '搜索车站...' : '搜尋車站...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    setIsOpen(false)
+                  }
+                }}
               />
             </div>
           </div>
-          <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+          <div id={listboxId} role="listbox" aria-labelledby={triggerId} className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
             {filteredOptions.length > 0 ? (
               filteredOptions.map(s => (
-                <div 
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={value === s.id}
                   key={s.id}
                   onClick={() => {
                     onChange(s.id)
@@ -92,13 +118,13 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                   }}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
                     value === s.id ? `${styles.bg} ${styles.text} font-bold` : 'hover:bg-gray-50'
-                  }`}
+                  } w-full text-left`}
                 >
                   <div className="text-sm">{locale === 'en' ? s.en : s.zh}</div>
-                </div>
+                </button>
               ))
             ) : (
-              <div className="p-4 text-center text-sm text-gray-400">No stations found</div>
+              <div className="p-4 text-center text-sm text-gray-400">{noStationText}</div>
             )}
           </div>
         </div>
@@ -108,7 +134,6 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
 }
 
 interface ControlPanelProps {
-  stations: StationMap
   originId: string | null
   destinationId: string | null
   ticketType: TicketType
@@ -119,7 +144,6 @@ interface ControlPanelProps {
 }
 
 const ControlPanel = ({
-  stations,
   originId,
   destinationId,
   ticketType,

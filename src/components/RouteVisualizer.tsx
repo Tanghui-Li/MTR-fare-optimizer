@@ -1,4 +1,4 @@
-import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, Locale } from '../types'
+import { RouteResult, StationMap, TicketType, DetailedSegment, Locale } from '../types'
 import FragmentedRouteCard from './FragmentedRouteCard'
 import DirectRouteCard from './DirectRouteCard'
 import { TrendingDown } from 'lucide-react'
@@ -10,11 +10,7 @@ interface RouteVisualizerProps {
   routeResult: RouteResult
   stations: StationMap
   directFare: number
-  originId: string
-  destinationId: string
   ticketType: TicketType
-  boringRouteDetails?: {hubId: string, fare1: number, fare2: number}
-  activeMatrix: FareMatrix
   routeMode: RouteMode
   onRouteModeChange: (mode: RouteMode) => void
   optimizedSegments: DetailedSegment[]
@@ -26,11 +22,7 @@ const RouteVisualizer = ({
   routeResult,
   stations,
   directFare,
-  originId,
-  destinationId,
   ticketType,
-  boringRouteDetails,
-  activeMatrix,
   routeMode,
   onRouteModeChange,
   optimizedSegments,
@@ -68,7 +60,7 @@ const RouteVisualizer = ({
                   <p className="savings-sub">{t(locale, 'extremeEfficiency')}</p>
                 </div>
               </div>
-              <div className="savings-watermark">HACKED</div>
+              <div className="savings-watermark">SAVED</div>
             </div>
           )}
 
@@ -77,6 +69,7 @@ const RouteVisualizer = ({
             <button
               className={`route-mode-btn ${routeMode === 'optimized' ? 'route-mode-btn-active optimized' : ''}`}
               onClick={() => onRouteModeChange('optimized')}
+              aria-pressed={routeMode === 'optimized'}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
@@ -88,6 +81,7 @@ const RouteVisualizer = ({
             <button
               className={`route-mode-btn ${routeMode === 'boring' ? 'route-mode-btn-active boring' : ''}`}
               onClick={() => onRouteModeChange('boring')}
+              aria-pressed={routeMode === 'boring'}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="5" y1="12" x2="19" y2="12" />
@@ -106,7 +100,6 @@ const RouteVisualizer = ({
           routeResult={routeResult} 
           stations={stations} 
           ticketType={ticketType}
-          activeMatrix={activeMatrix}
           detailedSegments={optimizedSegments}
           customLabel={!hasSavings ? t(locale, 'standardBestRoute') : undefined}
           locale={locale}
@@ -114,9 +107,6 @@ const RouteVisualizer = ({
       ) : (
         <DirectRouteCard 
           fare={directFare} 
-          origin={stations[originId]}
-          destination={stations[destinationId]}
-          boringRouteDetails={boringRouteDetails}
           stations={stations}
           detailedSegments={boringSegments}
           locale={locale}

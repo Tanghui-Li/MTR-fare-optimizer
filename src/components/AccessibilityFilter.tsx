@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import accessibilityRaw from '../data/accessibilityData.json';
+import { Locale } from '../types';
+import { t } from '../i18n';
 
 const accessibilityData = accessibilityRaw as {
   categories: Record<string, { catId: string; catZh: string; catEn: string; zh: string; en: string; order: number }>;
@@ -16,9 +18,10 @@ const categoryIcons: Record<string, string> = {
 interface AccessibilityFilterProps {
   filter: string[][];
   onFilterChange: (filter: string[][]) => void;
+  locale: Locale;
 }
 
-export default function AccessibilityFilter({ filter, onFilterChange }: AccessibilityFilterProps) {
+export default function AccessibilityFilter({ filter, onFilterChange, locale }: AccessibilityFilterProps) {
   const [expanded, setExpanded] = useState(false);
   const [isAdvanced, setIsAdvanced] = useState(false);
 
@@ -90,6 +93,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
   };
 
   const hasFilter = filter.length > 0;
+  const localName = (value: { zh: string; en: string }) => (locale === 'en' ? value.en : value.zh);
 
   return (
     <div className={`acc-filter-panel ${expanded ? 'expanded' : ''}`}>
@@ -101,7 +105,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
           {hasFilter ? '♿✨' : '♿'}
         </span>
         <span className="acc-filter-toggle-text">
-          無障礙篩選
+          {t(locale, 'accessibilityFilter')}
           {hasFilter && <span className="acc-filter-badge">{filter.length}</span>}
         </span>
         <span className="acc-filter-arrow">{expanded ? '▲' : '▼'}</span>
@@ -115,17 +119,17 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
               className={`acc-filter-mode-btn ${!isAdvanced ? 'active' : ''}`}
               onClick={() => { setIsAdvanced(false); clearAll(); }}
             >
-              簡單篩選
+              {t(locale, 'simpleFilter')}
             </button>
             <button
               className={`acc-filter-mode-btn ${isAdvanced ? 'active' : ''}`}
               onClick={() => { setIsAdvanced(true); clearAll(); }}
             >
-              高級篩選 (CNF)
+              {t(locale, 'advancedFilterReadable')}
             </button>
             {hasFilter && (
               <button className="acc-filter-clear-btn" onClick={clearAll}>
-                清除全部
+                {t(locale, 'clearAll')}
               </button>
             )}
           </div>
@@ -133,7 +137,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
           {!isAdvanced && (
             /* Simple mode: checkboxes, each = AND clause */
             <div className="acc-filter-simple">
-              <div className="acc-filter-hint">勾選需要的設施，車站將同時滿足所有條件</div>
+              <div className="acc-filter-hint">{t(locale, 'accessibilitySimpleHint')}</div>
               {categoryOrder.map(catId => {
                 const group = grouped[catId];
                 if (!group) return null;
@@ -141,7 +145,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
                   <div key={catId} className="acc-filter-cat">
                     <div className="acc-filter-cat-header">
                       <span>{categoryIcons[catId]}</span>
-                      <span className="acc-filter-cat-name">{group.catZh}</span>
+                      <span className="acc-filter-cat-name">{locale === 'en' ? group.catEn : group.catZh}</span>
                     </div>
                     <div className="acc-filter-cat-items">
                       {group.items.map(item => (
@@ -152,7 +156,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
                             onChange={() => toggleSimple(item.code)}
                           />
                           <span className="acc-filter-item-label">
-                            {item.zh}
+                            {localName(item)}
                           </span>
                         </label>
                       ))}
@@ -167,20 +171,22 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
             /* Advanced CNF mode */
             <div className="acc-filter-advanced">
               <div className="acc-filter-hint">
-                每個子句內的設施為「或」關係，子句之間為「且」關係（合取範式 CNF）
+                {t(locale, 'accessibilityAdvancedHint')}
               </div>
 
               {/* Existing clauses */}
               {filter.map((clause, idx) => (
                 <div key={idx} className="acc-filter-clause">
                   <div className="acc-filter-clause-header">
-                    <span className="acc-filter-clause-num">子句 {idx + 1}</span>
+                    <span className="acc-filter-clause-num">{t(locale, 'filterGroup')} {idx + 1}</span>
                     <button className="acc-filter-clause-remove" onClick={() => removeClause(idx)}>✕</button>
                   </div>
                   <div className="acc-filter-clause-tags">
                     {clause.map(code => (
                       <span key={code} className="acc-filter-clause-tag">
-                        {accessibilityData.categories[code]?.zh || code}
+                        {accessibilityData.categories[code]
+                          ? localName(accessibilityData.categories[code])
+                          : code}
                       </span>
                     ))}
                   </div>
@@ -190,7 +196,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
               {/* Add new clause builder */}
               <div className="acc-filter-clause-builder">
                 <div className="acc-filter-clause-builder-title">
-                  {filter.length > 0 ? '＋ 添加新子句（AND）' : '構建第一個子句'}
+                  {filter.length > 0 ? `+ ${t(locale, 'addFilterGroup')}` : t(locale, 'buildFirstFilterGroup')}
                 </div>
                 <div className="acc-filter-clause-builder-items">
                   {categoryOrder.map(catId => {
@@ -200,7 +206,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
                       <div key={catId} className="acc-filter-cat">
                         <div className="acc-filter-cat-header">
                           <span>{categoryIcons[catId]}</span>
-                          <span className="acc-filter-cat-name">{group.catZh}</span>
+                          <span className="acc-filter-cat-name">{locale === 'en' ? group.catEn : group.catZh}</span>
                         </div>
                         <div className="acc-filter-cat-items">
                           {group.items.map(item => (
@@ -211,7 +217,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
                                 onChange={() => togglePending(item.code)}
                               />
                               <span className="acc-filter-item-label">
-                                {item.zh}
+                                {localName(item)}
                               </span>
                             </label>
                           ))}
@@ -225,7 +231,7 @@ export default function AccessibilityFilter({ filter, onFilterChange }: Accessib
                   onClick={addClause}
                   disabled={pendingClause.size === 0}
                 >
-                  添加此子句（{pendingClause.size} 項，以「或」連接）
+                  {t(locale, 'addCurrentFilterGroup')} ({pendingClause.size} {t(locale, 'selectedItemsOr')})
                 </button>
               </div>
             </div>

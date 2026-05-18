@@ -41,7 +41,6 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [showAccessibility, setShowAccessibility] = useState(false);
 
   const loadTrainData = useCallback(async () => {
     setLoading(true);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, PathStep, Locale } from '../types'
+import { RouteResult, StationMap, TicketType, DetailedSegment, PathStep, Locale } from '../types'
 import { lineColors, getLocalizedLineName } from '../data/lineColors'
 import { ArrowRight, MapPin, Zap, LogIn, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatCurrency, t } from '../i18n'
@@ -8,7 +8,6 @@ interface FragmentedRouteCardProps {
   routeResult: RouteResult
   stations: StationMap
   ticketType: TicketType
-  activeMatrix: FareMatrix
   detailedSegments: DetailedSegment[]
   customLabel?: string
   locale: Locale
@@ -52,7 +51,7 @@ function groupByLine(path: PathStep[]): { lineCode: string; stations: string[] }
   return groups;
 }
 
-const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, detailedSegments, customLabel, locale }: FragmentedRouteCardProps) => {
+const FragmentedRouteCard = ({ routeResult, stations, ticketType, detailedSegments, customLabel, locale }: FragmentedRouteCardProps) => {
   const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -72,21 +71,6 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, activeMatrix, 
       return next;
     });
   };
-
-  // Pre-process route to collapse walking interchanges for the header display
-  const displayRoute: { id: string; mergedWith?: string }[] = []
-  
-  for (let i = 0; i < routeResult.route.length; i++) {
-    const currentId = routeResult.route[i]
-    const nextId = routeResult.route[i + 1]
-    
-    if (nextId && COLLAPSE_GROUPS[currentId] === nextId) {
-      displayRoute.push({ id: currentId, mergedWith: nextId })
-      i++ // Skip next
-    } else {
-      displayRoute.push({ id: currentId })
-    }
-  }
 
   return (
     <div className="route-card optimized-card">

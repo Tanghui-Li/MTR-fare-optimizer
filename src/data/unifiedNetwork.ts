@@ -93,38 +93,8 @@ function parseCsv(text: string): CsvRow[] {
   });
 }
 
-function cleanText(value: string | undefined): string {
-  return (value ?? '').trim();
-}
-
 function prefixId(prefix: string, id: string): string {
   return `${prefix}:${id}`;
-}
-
-function normalizeText(text: string): string {
-  return text
-    .replace(/\s+/g, '')
-    .replace(/[()（）,，.。·]/g, '')
-    .toLowerCase();
-}
-
-const HUB_MATCHES: Array<{ key: string; terms: string[] }> = [
-  { key: 'yuen-long', terms: ['元朗', '元朗站', '港鐵元朗站', '輕鐵元朗站', '元朗 (元朗)', '元朗 (元朗, 港鐵元朗)', 'Yuen Long', 'Yuen Long Station', 'MTR Yuen Long Station'] },
-  { key: 'long-ping', terms: ['朗屏', '朗屏站', '港鐵朗屏站', 'Long Ping', 'Long Ping Station'] },
-  { key: 'tin-shui-wai', terms: ['天水圍', '天水圍站', '港鐵天水圍站', '輕鐵天水圍站', '天盛苑', 'Tin Shui Wai', 'Tin Shui Wai Station', 'Tin Shing Court'] },
-  { key: 'siu-hong', terms: ['兆康', '兆康站', '港鐵兆康站', '輕鐵兆康站', 'Siu Hong', 'Siu Hong Station'] },
-  { key: 'tuen-mun', terms: ['屯門', '屯門站', '港鐵屯門站', '輕鐵屯門站', 'Tuen Mun', 'Tuen Mun Station'] },
-  { key: 'tai-po-market', terms: ['大埔墟', '大埔墟站', '港鐵大埔墟站', 'Tai Po Market', 'Tai Po Market Station'] },
-];
-
-function matchHubKey(text: string): string | null {
-  const normalized = normalizeText(text);
-  for (const entry of HUB_MATCHES) {
-    if (entry.terms.some((term) => normalized.includes(normalizeText(term)))) {
-      return entry.key;
-    }
-  }
-  return null;
 }
 
 export const lineDefinitions: LineDefinition[] = [

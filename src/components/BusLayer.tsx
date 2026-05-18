@@ -27,11 +27,9 @@ interface BusLayerProps {
 
 export default function BusLayer({ locale }: BusLayerProps) {
   const [vehicles, setVehicles] = useState<BusVehicle[]>([]);
-  const [loading, setLoading] = useState(false);
   const map = useMap();
 
   const fetchAllBuses = useCallback(async () => {
-    setLoading(true);
     const vehicleMap = new Map<string, BusVehicle>();
     const bounds = map.getBounds();
 
@@ -90,7 +88,6 @@ export default function BusLayer({ locale }: BusLayerProps) {
 
     await Promise.all(fetchPromises);
     setVehicles(Array.from(vehicleMap.values()));
-    setLoading(false);
   }, [map]);
 
   useEffect(() => {

@@ -13,7 +13,6 @@ import StationPopup from './StationPopup';
 import BusLayer from './BusLayer';
 import BusStopLayer from './BusStopLayer';
 import LRTStationLayer from './LRTStationLayer';
-import LRTPopup from './LRTPopup';
 import AccessibilityFilter from './AccessibilityFilter';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
@@ -68,9 +67,9 @@ function RouteFitter({ routeSegments }: { routeSegments?: DetailedSegment[] }) {
 }
 
 export default function MapView({ routeSegments, originId, destinationId, locale }: MapViewProps) {
-  const [showBuses, setShowBuses] = useState(true);
-  const [showBusStops, setShowBusStops] = useState(true);
-  const [showLRT, setShowLRT] = useState(true);
+  const [showBuses, setShowBuses] = useState(false);
+  const [showBusStops, setShowBusStops] = useState(false);
+  const [showLRT, setShowLRT] = useState(false);
   // Accessibility filter: array of clauses; each clause is a set of item codes (OR); all clauses must match (AND/CNF)
   const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
 
@@ -288,6 +287,7 @@ export default function MapView({ routeSegments, originId, destinationId, locale
       <AccessibilityFilter
         filter={accessibilityFilter}
         onFilterChange={setAccessibilityFilter}
+        locale={locale}
       />
 
       {/* Leaflet Map */}

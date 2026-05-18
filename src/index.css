@@ -5,6 +5,7 @@
 /* ===== App Root ===== */
 .app-root {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: #f8fafc;
@@ -658,7 +659,9 @@
 }
 
 .map-toggle input {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .map-toggle-slider {
@@ -690,6 +693,11 @@
 
 .map-toggle input:checked + .map-toggle-slider::after {
   transform: translateX(16px);
+}
+
+.map-toggle input:focus-visible + .map-toggle-slider {
+  outline: 2px solid #0f172a;
+  outline-offset: 2px;
 }
 
 .map-toggle-label {
@@ -1302,8 +1310,18 @@
 
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
+  .app-root {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   .unified-layout {
     flex-direction: column;
+    flex: none;
+    min-height: auto;
   }
 
   .tab-nav-inner {
@@ -1330,11 +1348,13 @@
   }
 
   .right-panel {
-    min-height: 50vh;
+    min-height: 56vh;
+    min-height: 56dvh;
   }
 
   .leaflet-map {
-    min-height: 50vh;
+    min-height: 56vh;
+    min-height: 56dvh;
   }
 
   .tab-brand-sub {
@@ -1368,6 +1388,11 @@
     padding: 6px 8px;
   }
 
+  .map-control-group {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+
   .map-legend {
     gap: 4px;
   }
@@ -1385,8 +1410,8 @@
   }
 
   .station-popup {
-    min-width: 300px !important;
-    max-width: 360px !important;
+    min-width: min(300px, calc(100vw - 32px)) !important;
+    max-width: calc(100vw - 32px) !important;
   }
 
   .route-card-inner {
@@ -1407,6 +1432,15 @@
   }
 
   .route-segment-info-text {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .acc-filter-mode-row {
+    flex-wrap: wrap;
+  }
+
+  .acc-filter-clear-btn {
     width: 100%;
   }
 }

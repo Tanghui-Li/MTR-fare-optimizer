@@ -6,7 +6,7 @@
 
 ### 1. 恢复真实 `opendata/` 数据（已解决）
 
-当前 `opendata/` 目录为空，但代码会在启动和构建时静态导入以下文件：
+真实 `opendata/` 数据已恢复。代码会在启动和构建时静态导入以下文件：
 
 - `opendata/light_rail_fares.csv`
 - `opendata/light_rail_routes_and_stops.csv`
@@ -18,16 +18,16 @@
 
 - `src/data/unifiedNetwork.ts`
 
-影响：
+历史影响：
 
-- Vite dev server 可以监听端口，但真实页面加载会因缺失 CSV 报错。
-- `npm run build` 在真实仓库状态下会失败。
-- 不应使用占位 CSV 伪装项目可运行；需要找回或重新下载真实开放数据。
+- Vite dev server 曾可以监听端口，但真实页面加载会因缺失 CSV 报错。
+- `npm run build` 曾因缺失 CSV 失败。
+- 当前已用真实开放数据解决，不使用占位 CSV。
 
-最小下一步：
+后续要求：
 
-- 从组员、本地备份或官方开放数据来源恢复真实 `opendata/` 目录。
-- 恢复后运行 `npm run build` 验证。
+- 保持 `opendata/` 数据来源可追溯。
+- 数据更新后重新运行 `npm run build` 验证。
 
 ### 2. 明确数据获取链路（已解决）
 
@@ -93,10 +93,18 @@
 
 ### 5. 重做移动端布局
 
+状态：部分处理。
+
 当前问题：
 
-- `src/index.css` 中 `.app-root` 使用 `height: 100vh` 和 `overflow: hidden`。
-- `900px` 以下改成上下布局后，左侧表单和结果可能把地图挤到不可达区域。
+- `src/index.css` 中 `.app-root` 曾使用 `height: 100vh` 和 `overflow: hidden`，移动端页面可能无法完整滚动。
+- `900px` 以下上下布局仍不是最终理想形态，还没有完成 Bottom Sheet。
+
+已处理：
+
+- 移动端根容器改为可纵向滚动。
+- 地图在移动端使用稳定的 `vh/dvh` 高度。
+- 地图控制条允许换行，减少小屏溢出风险。
 
 建议移动端结构：
 
@@ -113,11 +121,13 @@
 
 ### 6. 替换自制车站下拉
 
+状态：部分处理。
+
 当前问题：
 
-- `src/components/ControlPanel.tsx` 的 `SearchableDropdown` 使用 `div onClick`。
-- 缺少标准 combobox/listbox 语义。
-- 键盘操作、焦点管理和屏幕阅读器支持不足。
+- `src/components/ControlPanel.tsx` 的 `SearchableDropdown` 已从 `div onClick` 改为按钮触发器和 `listbox/option` 结构。
+- 已补 `aria-expanded`、`aria-controls`、`aria-selected`，并支持 `Escape` 关闭。
+- 仍未替换为完整的 shadcn/Radix Combobox，方向键选项焦点管理还不是最终形态。
 
 建议：
 
@@ -127,10 +137,16 @@
 
 ### 7. 降低地图首屏信息密度
 
+状态：已处理第一步。
+
 当前问题：
 
-- 轻铁站、巴士站、实时巴士默认全部开启。
+- 轻铁站、巴士站、实时巴士此前默认全部开启。
 - 地图上方图例过长，移动端首屏拥挤。
+
+已处理：
+
+- 轻铁站、巴士站、实时巴士默认关闭，用户可通过开关主动开启。
 
 建议：
 
@@ -140,11 +156,19 @@
 
 ### 8. 统一多语言文案
 
+状态：已处理第一步。
+
 当前问题：
 
-- `src/components/AccessibilityFilter.tsx` 内大量写死繁体中文。
-- 切换英文/简体时无障碍筛选器不会同步语言。
+- `src/components/AccessibilityFilter.tsx` 曾大量写死繁体中文。
+- 切换英文/简体时无障碍筛选器曾不会同步语言。
 - “CNF” 对普通用户不友好。
+
+已处理：
+
+- `AccessibilityFilter` 已接收 `locale`。
+- 面板标题、模式、提示、按钮、设施项已按语言切换。
+- “CNF” 已替换为更面向用户的“条件组合”类文案。
 
 建议：
 
@@ -154,10 +178,12 @@
 
 ### 9. 清理演示残留文案
 
-当前问题：
+状态：已处理。
 
-- `src/components/RouteVisualizer.tsx` 中有 `HACKED`。
-- `src/App.tsx` 中有 `UI Version: 2.1.0-neutral-grey`。
+已处理问题：
+
+- `src/components/RouteVisualizer.tsx` 中的 `HACKED` 已替换为正式展示文案。
+- `src/App.tsx` 中的 `UI Version: 2.1.0-neutral-grey` 已移除。
 
 建议：
 
@@ -168,15 +194,17 @@
 
 ### 10. 修复 lint 脚本
 
-当前情况：
+状态：已处理。
+
+历史情况：
 
 - `package.json` 有 `npm run lint`。
-- 但仓库没有 ESLint 配置，运行会失败。
+- 仓库曾没有 ESLint 配置，运行会失败。
 
-任务：
+已处理：
 
-- 添加项目匹配的 ESLint 配置，或移除/调整不可用脚本。
-- 配置应覆盖 TypeScript + React。
+- 已添加项目匹配的 ESLint 配置。
+- 当前 `npm run lint` 可通过。
 
 ### 11. 明确测试策略
 
@@ -191,9 +219,17 @@
 
 ### 12. 控制构建体积
 
+状态：已处理第一步。
+
 已观察到：
 
 - 之前在临时占位 CSV 存在时构建成功，但 JS chunk 超过 500 kB，Vite 给出警告。
+- 恢复真实数据后，未拆包时主应用 chunk 接近 960 kB。
+
+已处理：
+
+- 已在 `vite.config.ts` 中按 React、Leaflet、开放数据、静态交通数据、票价数据拆分 chunk。
+- 当前构建不再出现超过 500 kB 的 chunk 警告。
 
 建议：
 
@@ -203,19 +239,18 @@
 ## 当前验证状态
 
 - `npm ci`：已运行成功。
-- `npm run dev -- --host 0.0.0.0`：已启动，Vite 监听 `0.0.0.0:5173`。
-- 页面真实加载：当前会因缺失 `opendata/*.csv` 失败。
-- `npm run build`：真实仓库状态下预计失败，根因是缺失 `opendata/*.csv`。
-- `npm run lint`：失败，根因是缺少 ESLint 配置。
+- `npm run dev -- --host 0.0.0.0`：此前已启动过，Vite 可监听 `0.0.0.0:5173`。
+- 页面真实加载：数据已恢复，缺失 `opendata/*.csv` 的阻塞已解除。
+- `npm run build`：已通过；chunk 拆分后不再出现超过 500 kB 的 Vite 警告。
+- `npm run lint`：已通过。
 - 测试：仓库未发现测试文件，未运行测试。
 
 ## 推荐执行顺序
 
-1. 恢复真实 `opendata/` 数据。
-2. 确认 `npm run build` 可通过。
-3. 修复/补齐数据来源说明。
-4. 重构移动端为地图 + Bottom Sheet。
-5. 替换自制车站下拉，补可访问性。
-6. 收敛地图图层和无障碍筛选交互。
-7. 统一设计 token、文案和正式演示细节。
-8. 配置 lint 和最低限度测试。
+1. 修复/补齐数据来源说明。
+2. 重构移动端为地图 + Bottom Sheet。
+3. 替换自制车站下拉，补可访问性。
+4. 收敛地图图层和无障碍筛选交互。
+5. 统一设计 token、文案和正式演示细节。
+6. 补最低限度测试或人工验收清单。
+7. 后续可继续做地图/实时图层按需加载，进一步降低首屏执行成本。

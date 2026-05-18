@@ -252,19 +252,6 @@ function normalizeLrtStopId(rawId: string): string {
   return digits.padStart(3, '0');
 }
 
-function getBusRouteFare(routeId: string, ticketType: TicketType): number {
-  const fareField = ticketType === 'octopus' ? 'FARE_OCTO_ADULT' : 'FARE_SINGLE_ADULT';
-  const rows = busFareRows.filter((row) => row.ROUTE_ID === routeId);
-  let fare = Number.POSITIVE_INFINITY;
-  for (const row of rows) {
-    const parsed = Number(row[fareField]);
-    if (Number.isFinite(parsed)) {
-      fare = Math.min(fare, parsed);
-    }
-  }
-  return Number.isFinite(fare) ? fare : Number.POSITIVE_INFINITY;
-}
-
 function buildGraph(ticketType: TicketType, isAELTrip: boolean, mtrFareMatrix: FareMatrix): Map<string, GraphEdge[]> {
   const graph = new Map<string, GraphEdge[]>();
 

@@ -6,9 +6,6 @@ import { formatCurrency, t } from '../i18n'
 
 interface DirectRouteCardProps {
   fare: number
-  origin: StationMetadata
-  destination: StationMetadata
-  boringRouteDetails?: {hubId: string, fare1: number, fare2: number}
   stations?: StationMap
   detailedSegments: DetailedSegment[]
   locale: Locale
@@ -42,7 +39,7 @@ function groupByLine(path: PathStep[]): { lineCode: string; stations: string[] }
   return groups;
 }
 
-const DirectRouteCard = ({ fare, origin, destination, boringRouteDetails, stations, detailedSegments, locale }: DirectRouteCardProps) => {
+const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRouteCardProps) => {
   const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
 
   useEffect(() => {
