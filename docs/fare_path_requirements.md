@@ -1,5 +1,7 @@
 # Fare and Route Display Requirements (MTR/LRT/Bus)
 
+Last updated: 2026-05-20
+
 ## 1) Scope and goals
 This document defines the fare and route display behaviors that must be implemented using the opendata datasets plus official MTR policy constraints and earlier user guidance.
 
@@ -80,6 +82,7 @@ Primary goals:
 
 ### 4.3 Bus path expansion
 - Use mtr_bus_stops.csv to build adjacency per route and direction (use STATION_SEQNO).
+- Build adjacency per route variant (REFERENCE_ID) + direction to avoid mixing sequences.
 - Expand bus edges into ordered stop sequences for display.
 
 ## 5) Interchange rules (critical)
@@ -88,6 +91,7 @@ Primary goals:
   - LRT stop IDs: 100 (Siu Hong), 295 (Tuen Mun), 430 (Tin Shui Wai), 600 (Yuen Long)
   - MTR station IDs: 119 (Siu Hong), 120 (Tuen Mun), 118 (Tin Shui Wai), 117 (Long Ping), 116 (Yuen Long), 72 (Tai Po Market)
 - Bus stops must NOT be treated as interchanges by fuzzy name matching. Only bus stops that explicitly reference a rail stop (e.g., containing “港鐵…站” / “MTR … Station” or “輕鐵…站” / “LR … Stop”) can be linked to rail, unless an official interchange list is provided.
+- Bus->MTR/LRT transfers are created only via explicit stop name markers or an official whitelist.
 
 ## 6) Route display requirements
 ### 6.1 Line labels
@@ -101,7 +105,10 @@ Primary goals:
 
 ### 6.3 Exit/Re-enter visibility
 - If the optimized route uses multiple paid fare legs, each paid leg must be a separate segment.
-- UI must show exit/re-enter points between paid legs.
+- UI must show exit and enter gates as separate steps.
+- Do not show the label “TRANSFER” in route cards; use exit/enter plus optional transfer notes instead.
+- Entry station names must reflect the actual paid leg (skip leading TRANSFER edges).
+- Each gate step must include a station type tag (MTR/LRT/Bus).
 
 ## 7) Filtering and line selection labels
 - Line selector must use the correct official labels:
