@@ -513,7 +513,12 @@ function buildDetailedSegments(route: string[], edges: GraphEdge[]): DetailedSeg
   const flushSegment = (startEdge: number, endEdge: number) => {
     if (endEdge < startEdge) return;
 
-    const segmentEdges = edges.slice(startEdge, endEdge + 1);
+    const rawSegmentEdges = edges.slice(startEdge, endEdge + 1);
+    let segmentEdges = rawSegmentEdges;
+    while (segmentEdges.length > 0 && segmentEdges[0].mode === 'TRANSFER') {
+      segmentEdges = segmentEdges.slice(1);
+    }
+    if (segmentEdges.length === 0) segmentEdges = rawSegmentEdges;
     const expandedNodes: string[] = [];
     const expandedHopLineCodes: string[] = [];
     const expandedHopModes: TransportMode[] = [];

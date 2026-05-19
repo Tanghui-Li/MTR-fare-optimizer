@@ -51,6 +51,12 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
     return locale === 'en' ? station.en : station.zh;
   };
 
+  const getStationTypeLabel = (stationId: string) => {
+    if (stationId.startsWith('lrt:')) return t(locale, 'lrtStation');
+    if (stationId.startsWith('bus:')) return t(locale, 'busStation');
+    return t(locale, 'mtrStation');
+  };
+
   const toggleSegment = (index: number) => {
     setExpandedSegments(prev => {
       const next = new Set(prev);
@@ -82,10 +88,11 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
             const prevSeg = segIdx > 0 ? detailedSegments[segIdx - 1] : null;
             const isExpanded = expandedSegments.has(segIdx);
             const lineGroups = groupByLine(seg.path);
+            const displayLineGroups = lineGroups.filter((group) => group.lineCode !== 'TRANSFER');
             const fromStation = stations?.[seg.from];
             const toStation = stations?.[seg.to];
             const totalStops = seg.path.length;
-            const transferCount = lineGroups.length - 1;
+            const transferCount = Math.max(displayLineGroups.length - 1, 0);
             const showTransferNote = Boolean(prevSeg && prevSeg.to !== seg.from);
             const transferFrom = prevSeg ? stations?.[prevSeg.to] : undefined;
 
@@ -96,7 +103,10 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                   <div className="route-stop route-stop-terminal">
                     <div className="route-stop-dot origin" />
                     <div className="route-stop-info">
-                      <h4>{displayName(fromStation)}</h4>
+                      <h4>
+                        {displayName(fromStation)}
+                        <span className="route-stop-type">({getStationTypeLabel(seg.from)})</span>
+                      </h4>
                       <div className="route-stop-action enter">
                         <LogIn className="w-3 h-3" />
                         {t(locale, 'enterSystem')}
@@ -115,7 +125,10 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                     <div className="route-stop route-stop-transfer">
                       <div className="route-stop-dot exit-reenter" />
                       <div className="route-stop-info">
-                        <h4>{displayName(fromStation)}</h4>
+                        <h4>
+                          {displayName(fromStation)}
+                          <span className="route-stop-type">({getStationTypeLabel(seg.from)})</span>
+                        </h4>
                         <div className="route-stop-action enter">
                           <LogIn className="w-3 h-3" />
                           {t(locale, 'enterGate')}
@@ -132,7 +145,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                     onClick={() => toggleSegment(segIdx)}
                   >
                     <div className="route-segment-lines">
-                      {lineGroups.map((g, gi) => (
+                      {displayLineGroups.map((g, gi) => (
                         <span
                           key={gi}
                           className="route-segment-line-tag"
@@ -151,7 +164,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                   {/* Expanded path detail */}
                   {isExpanded && (
                     <div className="route-segment-detail">
-                      {lineGroups.map((group, gi) => (
+                      {displayLineGroups.map((group, gi) => (
                         <div key={gi} className="route-line-group">
                           <div className="route-line-group-header">
                             <span
@@ -190,7 +203,10 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                 <div className={`route-stop ${isLastSeg ? 'route-stop-terminal' : 'route-stop-transfer'}`}>
                   <div className={`route-stop-dot ${isLastSeg ? 'destination' : 'exit-reenter'}`} />
                   <div className="route-stop-info">
-                    <h4>{displayName(toStation)}</h4>
+                    <h4>
+                      {displayName(toStation)}
+                      <span className="route-stop-type">({getStationTypeLabel(seg.to)})</span>
+                    </h4>
                     <div className="route-stop-fare">
                       <span className="route-stop-fare-label">{isLastSeg ? t(locale, 'finalExit') : t(locale, 'exitGate')}</span>
                       <ArrowRight className="w-3.5 h-3.5" />

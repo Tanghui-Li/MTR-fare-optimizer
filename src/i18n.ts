@@ -84,6 +84,9 @@ const localeText = {
     geospatialDataPlatform: '地理空間數據平台',
     mapFromLabel: '地圖來自',
     landsDepartment: '地政總署',
+    mtrStation: '港鐵站',
+    lrtStation: '輕鐵站',
+    busStation: '巴士站',
   },
   en: {
     appBrand: 'MTR Tools',
@@ -162,6 +165,9 @@ const localeText = {
     geospatialDataPlatform: 'Geospatial Information Hub',
     mapFromLabel: 'Map by',
     landsDepartment: 'Lands Department',
+    mtrStation: 'MTR station',
+    lrtStation: 'Light Rail stop',
+    busStation: 'Bus stop',
   },
   'zh-Hans': {
     appBrand: 'MTR 工具',
@@ -240,6 +246,9 @@ const localeText = {
     geospatialDataPlatform: '地理空间数据平台',
     mapFromLabel: '地图来自',
     landsDepartment: '地政总署',
+    mtrStation: '港铁站',
+    lrtStation: '轻铁站',
+    busStation: '巴士站',
   },
 } as const;
 
