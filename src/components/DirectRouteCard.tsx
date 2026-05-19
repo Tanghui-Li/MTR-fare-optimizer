@@ -79,12 +79,15 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
           {detailedSegments.map((seg, segIdx) => {
             const isFirstSeg = segIdx === 0;
             const isLastSeg = segIdx === detailedSegments.length - 1;
+            const prevSeg = segIdx > 0 ? detailedSegments[segIdx - 1] : null;
             const isExpanded = expandedSegments.has(segIdx);
             const lineGroups = groupByLine(seg.path);
             const fromStation = stations?.[seg.from];
             const toStation = stations?.[seg.to];
             const totalStops = seg.path.length;
             const transferCount = lineGroups.length - 1;
+            const showTransferNote = Boolean(prevSeg && prevSeg.to !== seg.from);
+            const transferFrom = prevSeg ? stations?.[prevSeg.to] : undefined;
 
             return (
               <div key={segIdx} className="route-segment">
@@ -100,6 +103,26 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                       </div>
                     </div>
                   </div>
+                )}
+
+                {!isFirstSeg && (
+                  <>
+                    {showTransferNote && transferFrom && fromStation && (
+                      <div className="route-transfer-note">
+                        {t(locale, 'transferNote')}: {displayName(transferFrom)}{' -> '}{displayName(fromStation)}
+                      </div>
+                    )}
+                    <div className="route-stop route-stop-transfer">
+                      <div className="route-stop-dot exit-reenter" />
+                      <div className="route-stop-info">
+                        <h4>{displayName(fromStation)}</h4>
+                        <div className="route-stop-action enter">
+                          <LogIn className="w-3 h-3" />
+                          {t(locale, 'enterGate')}
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {/* Segment details (expandable) */}
@@ -169,7 +192,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                   <div className="route-stop-info">
                     <h4>{displayName(toStation)}</h4>
                     <div className="route-stop-fare">
-                      <span className="route-stop-fare-label">{isLastSeg ? t(locale, 'finalExit') : t(locale, 'exitReenter')}</span>
+                      <span className="route-stop-fare-label">{isLastSeg ? t(locale, 'finalExit') : t(locale, 'exitGate')}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                       <span className="route-stop-fare-amount">{formatCurrency(seg.fare)}</span>
                     </div>

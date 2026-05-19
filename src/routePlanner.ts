@@ -1,6 +1,8 @@
 import { FareMatrix, DetailedSegment, PathStep, RouteResult, TicketType, TransportMode } from './types';
 import {
   getBusRouteMode,
+  getExplicitBusLrtTransfers,
+  getExplicitBusMtrTransfers,
   getHubKey,
   getNode,
   getNodeCoordinates,
@@ -18,6 +20,7 @@ interface GraphEdge {
   fare: number;
   mode: TransportMode;
   lineCode: string;
+  busKey?: string;
 }
 
 const mtrAdjacency: Map<string, Set<string>> = (() => {
@@ -113,28 +116,32 @@ const lrtAdjacency: Map<string, Set<string>> = (() => {
 })();
 
 const busRouteAdjacency: Map<string, Map<string, Set<string>>> = (() => {
-  const byRoute = new Map<string, Array<{ stopId: string; seq: number }>>();
+  const byKey = new Map<string, Array<{ stopId: string; seq: number }>>();
   for (const row of rawBusStopRows) {
     const routeId = row.ROUTE_ID || '';
+    const referenceId = row.REFERENCE_ID || routeId;
+    const direction = row.DIRECTION || '';
     const stopId = row.STATION_ID || '';
     const seq = Number(row.STATION_SEQNO || '0');
     if (!routeId || !stopId || !Number.isFinite(seq)) continue;
-    if (!byRoute.has(routeId)) byRoute.set(routeId, []);
-    byRoute.get(routeId)!.push({ stopId, seq });
+    const key = `${referenceId}|${direction}`;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key)!.push({ stopId, seq });
   }
+
   const result = new Map<string, Map<string, Set<string>>>();
-  for (const [routeId, stops] of byRoute.entries()) {
+  for (const [key, stops] of byKey.entries()) {
     const graph = new Map<string, Set<string>>();
     const ordered = stops.sort((a, b) => a.seq - b.seq);
     for (let i = 1; i < ordered.length; i++) {
-      const a = ordered[i - 1].stopId;
-      const b = ordered[i].stopId;
-      if (!graph.has(a)) graph.set(a, new Set());
-      if (!graph.has(b)) graph.set(b, new Set());
-      graph.get(a)!.add(b);
-      graph.get(b)!.add(a);
+      const from = ordered[i - 1].stopId;
+      const to = ordered[i].stopId;
+      if (!graph.has(from)) graph.set(from, new Set());
+      if (!graph.has(to)) graph.set(to, new Set());
+      graph.get(from)!.add(to);
+      graph.get(to)!.add(from);
     }
-    result.set(routeId, graph);
+    result.set(key, graph);
   }
   return result;
 })();
@@ -194,7 +201,8 @@ function expandEdgeStations(edge: GraphEdge): string[] {
   if ((edge.mode === 'NWBUS' || edge.mode === 'TAIPOBUS') && edge.from.startsWith('bus:') && edge.to.startsWith('bus:')) {
     const from = edge.from.slice(4);
     const to = edge.to.slice(4);
-    const graph = busRouteAdjacency.get(edge.lineCode);
+    const graphKey = edge.busKey || edge.lineCode;
+    const graph = busRouteAdjacency.get(graphKey);
     if (!graph) return [edge.from, edge.to];
     const stopPath = bfsPath(from, to, graph);
     return stopPath.map((id) => `bus:${id}`);
@@ -327,29 +335,34 @@ function buildGraph(ticketType: TicketType, isAELTrip: boolean, mtrFareMatrix: F
     busFareLookup.set(routeId, current === undefined ? fare : Math.min(current, fare));
   }
 
-  const busGroups = new Map<string, Array<{ routeId: string; stopId: string; sequence: number }>>();
+  const busGroups = new Map<string, Array<{ routeId: string; referenceId: string; direction: string; stopId: string; sequence: number }>>();
   for (const row of busStopRows) {
     const routeId = row.ROUTE_ID || '';
     const referenceId = row.REFERENCE_ID || routeId;
+    const direction = row.DIRECTION || '';
     const stopId = row.STATION_ID || '';
     const sequence = Number(row.STATION_SEQNO || '0');
     if (!routeId || !stopId) continue;
-    const key = referenceId || routeId;
+    const key = `${referenceId || routeId}|${direction}`;
     if (!busGroups.has(key)) busGroups.set(key, []);
-    busGroups.get(key)!.push({ routeId, stopId, sequence });
+    busGroups.get(key)!.push({ routeId, referenceId, direction, stopId, sequence });
   }
 
   for (const entries of busGroups.values()) {
     const ordered = entries.sort((a, b) => a.sequence - b.sequence);
     const routeId = ordered[0]?.routeId || '';
-    const fare = busFareLookup.get(routeId);
+    const referenceId = ordered[0]?.referenceId || routeId;
+    const direction = ordered[0]?.direction || '';
+    const fare = busFareLookup.get(routeId) ?? busFareLookup.get(referenceId);
     if (fare === undefined || !Number.isFinite(fare)) continue;
     const mode = getBusRouteMode(routeId);
+    const busKey = `${referenceId || routeId}|${direction}`;
     for (let i = 0; i < ordered.length; i++) {
       for (let j = i + 1; j < ordered.length; j++) {
         const from = `bus:${ordered[i].stopId}`;
         const to = `bus:${ordered[j].stopId}`;
-        addUndirectedEdge(graph, from, to, fare, mode, routeId);
+        addEdge(graph, { from, to, fare, mode, lineCode: routeId, busKey });
+        addEdge(graph, { from: to, to: from, fare, mode, lineCode: routeId, busKey });
       }
     }
   }
@@ -372,6 +385,17 @@ function buildGraph(ticketType: TicketType, isAELTrip: boolean, mtrFareMatrix: F
         addUndirectedEdge(graph, from, to, 0, 'TRANSFER', 'TRANSFER');
       }
     }
+  }
+
+  // Explicit bus-to-MTR transfers (strict matching, no fuzzy name inference).
+  const busTransfers = getExplicitBusMtrTransfers();
+  for (const { busId, mtrId } of busTransfers) {
+    addUndirectedEdge(graph, busId, mtrId, 0, 'TRANSFER', 'TRANSFER');
+  }
+
+  const busLrtTransfers = getExplicitBusLrtTransfers();
+  for (const { busId, lrtId } of busLrtTransfers) {
+    addUndirectedEdge(graph, busId, `lrt:${lrtId}`, 0, 'TRANSFER', 'TRANSFER');
   }
 
   return graph;

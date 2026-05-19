@@ -1,0 +1,296 @@
+{
+  "sourcePdf": "opendata/MTRWeb_Bus_Fare.pdf",
+  "generatedAt": "2026-05-19T17:22:04.215Z",
+  "entries": [
+    {
+      "busId": "K12-U010",
+      "railType": "MTR",
+      "railId": "72"
+    },
+    {
+      "busId": "506-U030",
+      "railType": "LRT",
+      "railId": "015"
+    },
+    {
+      "busId": "506-U070",
+      "railType": "LRT",
+      "railId": "060"
+    },
+    {
+      "busId": "506-U080",
+      "railType": "MTR",
+      "railId": "120"
+    },
+    {
+      "busId": "506-U110",
+      "railType": "LRT",
+      "railId": "920"
+    },
+    {
+      "busId": "506-D030",
+      "railType": "LRT",
+      "railId": "280"
+    },
+    {
+      "busId": "506-D040",
+      "railType": "LRT",
+      "railId": "295"
+    },
+    {
+      "busId": "506-D050",
+      "railType": "LRT",
+      "railId": "060"
+    },
+    {
+      "busId": "506-D100",
+      "railType": "LRT",
+      "railId": "015"
+    },
+    {
+      "busId": "506-U075",
+      "railType": "MTR",
+      "railId": "120"
+    },
+    {
+      "busId": "K51-U050",
+      "railType": "MTR",
+      "railId": "119"
+    },
+    {
+      "busId": "K51-U080",
+      "railType": "MTR",
+      "railId": "120"
+    },
+    {
+      "busId": "K51-U090",
+      "railType": "LRT",
+      "railId": "280"
+    },
+    {
+      "busId": "K51-D150",
+      "railType": "LRT",
+      "railId": "920"
+    },
+    {
+      "busId": "K51-D200",
+      "railType": "LRT",
+      "railId": "280"
+    },
+    {
+      "busId": "K51-D210",
+      "railType": "MTR",
+      "railId": "120"
+    },
+    {
+      "busId": "K51-D210",
+      "railType": "LRT",
+      "railId": "295"
+    },
+    {
+      "busId": "K51-D240",
+      "railType": "LRT",
+      "railId": "340"
+    },
+    {
+      "busId": "K51-D250",
+      "railType": "MTR",
+      "railId": "119"
+    },
+    {
+      "busId": "K52-nU070",
+      "railType": "LRT",
+      "railId": "920"
+    },
+    {
+      "busId": "K52-nU200",
+      "railType": "LRT",
+      "railId": "015"
+    },
+    {
+      "busId": "K52-nD140",
+      "railType": "LRT",
+      "railId": "015"
+    },
+    {
+      "busId": "K52-nD240",
+      "railType": "LRT",
+      "railId": "920"
+    },
+    {
+      "busId": "K53-D110",
+      "railType": "LRT",
+      "railId": "920"
+    },
+    {
+      "busId": "K54-U050",
+      "railType": "MTR",
+      "railId": "119"
+    },
+    {
+      "busId": "K54-D030",
+      "railType": "MTR",
+      "railId": "119"
+    },
+    {
+      "busId": "K58-U140",
+      "railType": "LRT",
+      "railId": "060"
+    },
+    {
+      "busId": "K58-D070",
+      "railType": "LRT",
+      "railId": "280"
+    },
+    {
+      "busId": "K58-D080",
+      "railType": "MTR",
+      "railId": "120"
+    },
+    {
+      "busId": "K58-D080",
+      "railType": "LRT",
+      "railId": "295"
+    },
+    {
+      "busId": "K58-D090",
+      "railType": "LRT",
+      "railId": "060"
+    },
+    {
+      "busId": "K65-U010",
+      "railType": "MTR",
+      "railId": "116"
+    },
+    {
+      "busId": "K65-U060",
+      "railType": "LRT",
+      "railId": "560"
+    },
+    {
+      "busId": "K65-U110",
+      "railType": "LRT",
+      "railId": "425"
+    },
+    {
+      "busId": "K65-U120",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K65-D100",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K65-D110",
+      "railType": "LRT",
+      "railId": "425"
+    },
+    {
+      "busId": "K65-D140",
+      "railType": "LRT",
+      "railId": "400"
+    },
+    {
+      "busId": "K65-D150",
+      "railType": "LRT",
+      "railId": "560"
+    },
+    {
+      "busId": "K65A-U010",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K66-U030",
+      "railType": "MTR",
+      "railId": "117"
+    },
+    {
+      "busId": "K66-D210",
+      "railType": "MTR",
+      "railId": "117"
+    },
+    {
+      "busId": "K68-U120",
+      "railType": "MTR",
+      "railId": "117"
+    },
+    {
+      "busId": "K68-D090",
+      "railType": "MTR",
+      "railId": "117"
+    },
+    {
+      "busId": "K73-D030",
+      "railType": "MTR",
+      "railId": "117"
+    },
+    {
+      "busId": "K74-U090",
+      "railType": "MTR",
+      "railId": "116"
+    },
+    {
+      "busId": "K74-D030",
+      "railType": "MTR",
+      "railId": "117"
+    },
+    {
+      "busId": "K75A-U020",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K75A-D010",
+      "railType": "LRT",
+      "railId": "380"
+    },
+    {
+      "busId": "K75A-D110",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K75P-U040",
+      "railType": "LRT",
+      "railId": "445"
+    },
+    {
+      "busId": "K75P-U050",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K75P-D010",
+      "railType": "LRT",
+      "railId": "380"
+    },
+    {
+      "busId": "K75P-D050",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K76-U040",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K76-U050",
+      "railType": "MTR",
+      "railId": "118"
+    },
+    {
+      "busId": "K76S-U015",
+      "railType": "LRT",
+      "railId": "530"
+    },
+    {
+      "busId": "K76S-D040",
+      "railType": "LRT",
+      "railId": "530"
+    }
+  ]
+}

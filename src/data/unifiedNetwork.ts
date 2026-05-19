@@ -97,6 +97,29 @@ function prefixId(prefix: string, id: string): string {
   return `${prefix}:${id}`;
 }
 
+function normalizeText(text: string): string {
+  return text
+    .replace(/\s+/g, '')
+    .replace(/[()（）,，.。·]/g, '')
+    .toLowerCase();
+}
+
+function normalizeStationKey(text: string): string {
+  const normalized = normalizeText(text);
+  return normalized.replace(/^mtr/, '').replace(/station$/, '').replace(/站$/, '');
+}
+
+function normalizeRailKey(text: string): string {
+  const normalized = normalizeText(text);
+  return normalized
+    .replace(/^mtr/, '')
+    .replace(/^lr/, '')
+    .replace(/^lightrail/, '')
+    .replace(/stop$/, '')
+    .replace(/station$/, '')
+    .replace(/站$/, '');
+}
+
 export const lineDefinitions: LineDefinition[] = [
   ...Object.entries(linesData as Record<string, { name: { zh: string; en: string } }>).map(([code, info]) => ({
     code,
@@ -274,6 +297,96 @@ export function getBusNodeRouteIds(nodeId: string): string[] {
   if (!node || node.kind !== 'bus') return [];
   const raw = busStopLocations.find((stop) => stop.id === node.sourceId);
   return raw?.routes || [];
+}
+
+function extractBusStopMtrName(zh: string, en: string): string | null {
+  const zhMatch = zh.match(/港鐵([^()（）]+?)站/);
+  if (zhMatch) return zhMatch[1].trim();
+  const zhBase = zh.split(/[()（）]/)[0].trim();
+  if (zhBase.endsWith('站')) return zhBase.slice(0, -1).trim();
+
+  const enMatch = en.match(/MTR\s+(.+?)\s+Station/i);
+  if (enMatch) return enMatch[1].trim();
+  const enBase = en.split('(')[0].trim();
+  if (/\sStation$/i.test(enBase)) {
+    return enBase.replace(/\sStation$/i, '').trim();
+  }
+
+  return null;
+}
+
+function extractBusStopLrtName(zh: string, en: string): string | null {
+  const zhMatch = zh.match(/輕鐵([^()（）]+?)站/);
+  if (zhMatch) return zhMatch[1].trim();
+  if (zh.includes('輕鐵')) {
+    return zh.replace(/輕鐵/g, '').replace(/站/g, '').split(/[()（）]/)[0].trim();
+  }
+
+  const enMatch = en.match(/LR\s+(.+?)\s+Stop/i);
+  if (enMatch) return enMatch[1].trim();
+  const enLightRailMatch = en.match(/Light\s*Rail\s+(.+?)\s+Stop/i);
+  if (enLightRailMatch) return enLightRailMatch[1].trim();
+  if (/\bLR\b/i.test(en) && /Stop/i.test(en)) {
+    return en.replace(/\bLR\b/i, '').replace(/Stop/i, '').split('(')[0].trim();
+  }
+
+  return null;
+}
+
+export function getExplicitBusMtrTransfers(): Array<{ busId: string; mtrId: string }> {
+  const mtrLookup = new Map<string, string>();
+  for (const [id, info] of Object.entries(mtrStationNames)) {
+    const zhKey = normalizeStationKey(info.zh || '');
+    if (zhKey) mtrLookup.set(zhKey, id);
+    const enKey = normalizeStationKey(info.en || '');
+    if (enKey) mtrLookup.set(enKey, id);
+  }
+
+  const results: Array<{ busId: string; mtrId: string }> = [];
+  const seen = new Set<string>();
+
+  for (const node of nodeCatalog.values()) {
+    if (node.kind !== 'bus') continue;
+    const candidate = extractBusStopMtrName(node.zh, node.en);
+    if (!candidate) continue;
+    const key = normalizeStationKey(candidate);
+    const mtrId = mtrLookup.get(key);
+    if (!mtrId) continue;
+    const unique = `${node.id}|${mtrId}`;
+    if (seen.has(unique)) continue;
+    seen.add(unique);
+    results.push({ busId: node.id, mtrId });
+  }
+
+  return results;
+}
+
+export function getExplicitBusLrtTransfers(): Array<{ busId: string; lrtId: string }> {
+  const lrtLookup = new Map<string, string>();
+  for (const [id, info] of Object.entries(lrtStations)) {
+    const zhKey = normalizeRailKey(info.zh || '');
+    if (zhKey) lrtLookup.set(zhKey, id);
+    const enKey = normalizeRailKey(info.en || '');
+    if (enKey) lrtLookup.set(enKey, id);
+  }
+
+  const results: Array<{ busId: string; lrtId: string }> = [];
+  const seen = new Set<string>();
+
+  for (const node of nodeCatalog.values()) {
+    if (node.kind !== 'bus') continue;
+    const candidate = extractBusStopLrtName(node.zh, node.en);
+    if (!candidate) continue;
+    const key = normalizeRailKey(candidate);
+    const lrtId = lrtLookup.get(key);
+    if (!lrtId) continue;
+    const unique = `${node.id}|${lrtId}`;
+    if (seen.has(unique)) continue;
+    seen.add(unique);
+    results.push({ busId: node.id, lrtId });
+  }
+
+  return results;
 }
 
 export function getHubKey(nodeId: string): string | null {
