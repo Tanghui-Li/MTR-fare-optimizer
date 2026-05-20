@@ -18,6 +18,7 @@ Last updated: 2026-05-20
 File: src/routePlanner.ts
 - MTR fares: from mtr_lines_fares.csv into a fare matrix.
 - AEL fares: from airport_express_fares.csv; special Octopus rules are enforced in graph building.
+- Fare matrix builder: src/data/mtrFareMatrix.ts (normalizes AEL station IDs 44/45/46 -> 39/40/42).
 - LRT fares: from light_rail_fares.csv; stop IDs normalized to 3 digits.
 - Bus fares: flat per route from mtr_bus_fares.csv (use minimum valid fare for route/variant).
 - Bus topology: built per reference-id + direction; path expansion uses ordered stop sequence.

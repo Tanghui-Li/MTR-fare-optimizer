@@ -76,8 +76,8 @@ Project/
 
 仓库中的 Python 脚本只负责处理本地 CSV，不会自动爬取或下载数据：
 
-- `clean_data.py`
-- `clean_stations.py`
+- `scripts/clean_data.py`
+- `scripts/clean_stations.py`
 - `scratch/process_fares.py`
 - `scratch/process_lines.py`
 

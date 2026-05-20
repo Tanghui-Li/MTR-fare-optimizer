@@ -4,13 +4,11 @@ import RouteVisualizer from './components/RouteVisualizer'
 import MapView from './components/MapView'
 import { findMultimodalRoute } from './routePlanner'
 import { unifiedStationMap } from './data/unifiedNetwork'
-import fareMatrixData from './fare_matrix.json'
-import { RouteResult, StationMap, TicketType, UnifiedFareMatrix, FareMatrix, DetailedSegment, Locale } from './types'
+import { getFareMatrix } from './data/mtrFareMatrix'
+import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, Locale } from './types'
 import { localeOptions, t } from './i18n'
 
 const stations = unifiedStationMap as StationMap
-const rawFareMatrix = fareMatrixData as UnifiedFareMatrix
-
 type RouteMode = 'optimized' | 'boring';
 
 function App() {
@@ -41,7 +39,7 @@ function App() {
 
   useEffect(() => {
     if (originId && destinationId) {
-      const matrixToUse: FareMatrix = JSON.parse(JSON.stringify(rawFareMatrix[ticketType]));
+      const matrixToUse: FareMatrix = JSON.parse(JSON.stringify(getFareMatrix(ticketType)));
       const optimizedResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'optimized')
       const boringResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'boring')
 

@@ -1,25 +1,14 @@
 import { useMemo } from 'react';
 import { CircleMarker, Tooltip } from 'react-leaflet';
-import busStopData from '../data/busStopLocations.json';
+import { busStopLocations } from '../data/unifiedNetwork';
 import { Locale } from '../types';
-
-interface BusStopEntry {
-  id: string;
-  lat: number;
-  lng: number;
-  zh: string;
-  en: string;
-  routes: string[];
-}
-
-const busStops = busStopData as BusStopEntry[];
 
 interface BusStopLayerProps {
   locale: Locale;
 }
 
 export default function BusStopLayer({ locale }: BusStopLayerProps) {
-  const markers = useMemo(() => busStops, []);
+  const markers = useMemo(() => busStopLocations, []);
 
   return (
     <>

@@ -33,6 +33,13 @@ Key inputs:
 3. Build
    - npm run build
 
+## Scripts and utilities
+- scripts/clean_data.py: legacy fare matrix builder (not used at runtime now).
+- scripts/clean_stations.py: regenerate src/stations.json from opendata.
+- scripts/hr_ids.txt, scripts/lr_ids.txt: station/stop ID lists.
+- scripts/bus_api_res.json: sample API response payload for debugging.
+- scratch/process_fares.py, scratch/process_lines.py: ad-hoc data processors.
+
 ## Documentation index
 - fare_path_requirements.md
 - AI_HANDOVER.md

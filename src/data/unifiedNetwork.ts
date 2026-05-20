@@ -2,7 +2,6 @@ import linesData from '../lines.json';
 import stationsData from '../stations.json';
 import { stationCoordinates as stationCoordinatesData } from './stationCoordinates';
 import lrtStationsData from './lrtStations.json';
-import busStopLocationsData from './busStopLocations.json';
 import busStopNamesData from './busStopNames.json';
 import { getLocalizedLineName } from './lineColors';
 
@@ -40,6 +39,16 @@ export interface StationOption {
   zh: string;
   en: string;
   category: TransportMode;
+}
+
+interface BusStopLocation {
+  id: string;
+  lat: number;
+  lng: number;
+  zh: string;
+  en: string;
+  routes: string[];
+  direction?: string;
 }
 
 interface CsvRow {
@@ -93,6 +102,48 @@ function parseCsv(text: string): CsvRow[] {
   });
 }
 
+export const rawLightRailFareRows = parseCsv(lightRailFaresCsv);
+export const rawLightRailRouteRows = parseCsv(lightRailRoutesCsv);
+export const rawBusFareRows = parseCsv(busFaresCsv);
+export const rawBusRouteRows = parseCsv(busRoutesCsv);
+export const rawBusStopRows = parseCsv(busStopsCsv);
+
+function buildBusStopLocations(rows: CsvRow[]): BusStopLocation[] {
+  const stopMap = new Map<string, { id: string; lat: number; lng: number; zh: string; en: string; routes: Set<string>; direction?: string }>();
+
+  for (const row of rows) {
+    const id = row.STATION_ID || '';
+    const lat = Number(row.STATION_LATITUDE || '');
+    const lng = Number(row.STATION_LONGITUDE || '');
+    const zh = row.STATION_NAME_CHI || '';
+    const en = row.STATION_NAME_ENG || '';
+    const routeId = row.ROUTE_ID || '';
+    const direction = row.DIRECTION || '';
+    if (!id || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+    let stop = stopMap.get(id);
+    if (!stop) {
+      stop = { id, lat, lng, zh, en, routes: new Set<string>(), direction };
+      stopMap.set(id, stop);
+    }
+
+    if (routeId) stop.routes.add(routeId);
+    if (!stop.zh && zh) stop.zh = zh;
+    if (!stop.en && en) stop.en = en;
+    if (!stop.direction && direction) stop.direction = direction;
+  }
+
+  return Array.from(stopMap.values()).map((stop) => ({
+    id: stop.id,
+    lat: stop.lat,
+    lng: stop.lng,
+    zh: stop.zh,
+    en: stop.en,
+    routes: Array.from(stop.routes),
+    direction: stop.direction,
+  }));
+}
+
 function prefixId(prefix: string, id: string): string {
   return `${prefix}:${id}`;
 }
@@ -140,8 +191,10 @@ export function getLineFilterOptions(): LineDefinition[] {
 export const mtrStationNames = stationsData as Record<string, { zh: string; en: string }>;
 export const mtrCoordinates = stationCoordinatesData as Record<string, { lat: number; lng: number }>;
 export const lrtStations = lrtStationsData as Record<string, { id: string; zh: string; en: string; lat: number; lng: number }>;
-export const busStopLocations = busStopLocationsData as Array<{ id: string; lat: number; lng: number; zh: string; en: string; routes: string[] }>;
+export const busStopLocations = buildBusStopLocations(rawBusStopRows);
 export const busStopNames = busStopNamesData as Record<string, { zh: string; en: string }>;
+
+const busStopLocationLookup = new Map<string, BusStopLocation>(busStopLocations.map((stop) => [stop.id, stop]));
 
 const TAIPO_BUS_ROUTES = new Set(['K12', 'K14', 'K17', 'K18']);
 
@@ -238,6 +291,23 @@ export function getNodeLabel(id: string, locale: 'zh-Hant' | 'en' | 'zh-Hans'): 
 export function getSelectableStations(lineCode: string): StationOption[] {
   const options: StationOption[] = [];
 
+  const getBusStopDisplayNames = (node: UnifiedNode): { zh: string; en: string } => {
+    const raw = node.sourceId ? busStopLocationLookup.get(node.sourceId) : undefined;
+    if (!raw) return { zh: node.zh, en: node.en };
+
+    const routeLabel = raw.routes.length > 0 ? raw.routes.join('/') : '';
+    const directionZh = raw.direction === 'O' ? '去程' : raw.direction === 'I' ? '回程' : '';
+    const directionEn = raw.direction === 'O' ? 'Outbound' : raw.direction === 'I' ? 'Inbound' : '';
+    const zhParts = [routeLabel, directionZh].filter(Boolean);
+    const enParts = [routeLabel, directionEn].filter(Boolean);
+    if (zhParts.length === 0 && enParts.length === 0) return { zh: node.zh, en: node.en };
+
+    return {
+      zh: `${node.zh} (${zhParts.join(' ')})`,
+      en: `${node.en} (${enParts.join(' ')})`,
+    };
+  };
+
   if (lineCode === 'LRT') {
     for (const node of nodeCatalog.values()) {
       if (node.kind === 'lrt') {
@@ -250,7 +320,8 @@ export function getSelectableStations(lineCode: string): StationOption[] {
   if (lineCode === 'NWBUS' || lineCode === 'TAIPOBUS') {
     for (const node of nodeCatalog.values()) {
       if (node.kind === 'bus' && node.category === lineCode) {
-        options.push({ id: node.id, zh: node.zh, en: node.en, category: lineCode as TransportMode });
+        const display = getBusStopDisplayNames(node);
+        options.push({ id: node.id, zh: display.zh, en: display.en, category: lineCode as TransportMode });
       }
     }
     return options;
@@ -258,7 +329,12 @@ export function getSelectableStations(lineCode: string): StationOption[] {
 
   if (lineCode === 'ALL') {
     for (const node of nodeCatalog.values()) {
-      options.push({ id: node.id, zh: node.zh, en: node.en, category: node.category });
+      if (node.kind === 'bus') {
+        const display = getBusStopDisplayNames(node);
+        options.push({ id: node.id, zh: display.zh, en: display.en, category: node.category });
+      } else {
+        options.push({ id: node.id, zh: node.zh, en: node.en, category: node.category });
+      }
     }
     options.sort((a, b) => a.zh.localeCompare(b.zh, 'zh-HK'));
     return options;
@@ -437,8 +513,3 @@ export function cleanBusArrivalText(text: string): string {
   return trimmed;
 }
 
-export const rawLightRailFareRows = parseCsv(lightRailFaresCsv);
-export const rawLightRailRouteRows = parseCsv(lightRailRoutesCsv);
-export const rawBusFareRows = parseCsv(busFaresCsv);
-export const rawBusRouteRows = parseCsv(busRoutesCsv);
-export const rawBusStopRows = parseCsv(busStopsCsv);

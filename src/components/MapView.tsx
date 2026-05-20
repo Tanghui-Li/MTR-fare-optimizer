@@ -68,9 +68,9 @@ function RouteFitter({ routeSegments }: { routeSegments?: DetailedSegment[] }) {
 }
 
 export default function MapView({ routeSegments, originId, destinationId, locale }: MapViewProps) {
-  const [showBuses, setShowBuses] = useState(false);
-  const [showBusStops, setShowBusStops] = useState(false);
-  const [showLRT, setShowLRT] = useState(false);
+  const [showBuses, setShowBuses] = useState(true);
+  const [showBusStops, setShowBusStops] = useState(true);
+  const [showLRT, setShowLRT] = useState(true);
   const [mobileLayerControlsOpen, setMobileLayerControlsOpen] = useState(false);
   // Accessibility filter: array of clauses; each clause is a set of item codes (OR); all clauses must match (AND/CNF)
   const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
