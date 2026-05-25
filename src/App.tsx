@@ -2,30 +2,42 @@ import { useState, useEffect, useMemo, useRef, type PointerEvent } from 'react'
 import ControlPanel from './components/ControlPanel'
 import RouteVisualizer from './components/RouteVisualizer'
 import MapView from './components/MapView'
+import AccessibilityFilter from './components/AccessibilityFilter'
 import { findMultimodalRoute } from './routePlanner'
 import { unifiedStationMap } from './data/unifiedNetwork'
 import { getFareMatrix } from './data/mtrFareMatrix'
 import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, Locale } from './types'
 import { localeOptions, t } from './i18n'
+import { SlidersHorizontal } from 'lucide-react'
+import { useMobileSheetDrag } from './hooks/useMobileSheetDrag'
 
 const stations = unifiedStationMap as StationMap
 type RouteMode = 'optimized' | 'boring';
 
 function App() {
-  const [originId, setOriginId] = useState<string | null>(null)
-  const [destinationId, setDestinationId] = useState<string | null>(null)
-  const [ticketType, setTicketType] = useState<TicketType>('octopus')
+  const [searchParams, setSearchParams] = useState({
+    originId: null as string | null,
+    destinationId: null as string | null,
+    ticketType: 'octopus' as TicketType,
+  })
   const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
-  const [mobilePanelExpanded, setMobilePanelExpanded] = useState(false)
-  const mobileSheetDragStartY = useRef<number | null>(null)
-  const mobileSheetDragged = useRef(false)
-  const suppressNextMobileSheetClick = useRef(false)
   
-  const [displayedOriginId, setDisplayedOriginId] = useState<string | null>(null)
-  const [displayedDestinationId, setDisplayedDestinationId] = useState<string | null>(null)
-  const [displayedTicketType, setDisplayedTicketType] = useState<TicketType>('octopus')
-  const [directFare, setDirectFare] = useState<number>(0)
+  const { sheetHeight, setSheetHeight, handlers: dragHandlers } = useMobileSheetDrag(400)
+  
+  // Map Layer Controls State
+  const [showBuses, setShowBuses] = useState(true);
+  const [showBusStops, setShowBusStops] = useState(true);
+  const [showLRT, setShowLRT] = useState(true);
+  const [mobileLayerControlsOpen, setMobileLayerControlsOpen] = useState(false);
+  const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
+  
+  const [displayedRouteInfo, setDisplayedRouteInfo] = useState({
+    originId: null as string | null,
+    destinationId: null as string | null,
+    ticketType: 'octopus' as TicketType,
+    directFare: 0,
+  })
 
   // Route visualization state
   const [routeMode, setRouteMode] = useState<RouteMode>('optimized')
@@ -38,16 +50,18 @@ function App() {
   }, [routeMode, optimizedSegments, boringSegments]);
 
   useEffect(() => {
-    if (originId && destinationId) {
-      const matrixToUse: FareMatrix = JSON.parse(JSON.stringify(getFareMatrix(ticketType)));
-      const optimizedResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'optimized')
-      const boringResult = findMultimodalRoute(matrixToUse, originId, destinationId, ticketType, 'boring')
+    if (searchParams.originId && searchParams.destinationId) {
+      const matrixToUse = getFareMatrix(searchParams.ticketType);
+      const optimizedResult = findMultimodalRoute(matrixToUse, searchParams.originId, searchParams.destinationId, searchParams.ticketType, 'optimized')
+      const boringResult = findMultimodalRoute(matrixToUse, searchParams.originId, searchParams.destinationId, searchParams.ticketType, 'boring')
 
       setRouteResult(optimizedResult)
-      setDisplayedOriginId(originId)
-      setDisplayedDestinationId(destinationId)
-      setDisplayedTicketType(ticketType)
-      setDirectFare(boringResult.totalFare)
+      setDisplayedRouteInfo({
+        originId: searchParams.originId,
+        destinationId: searchParams.destinationId,
+        ticketType: searchParams.ticketType,
+        directFare: boringResult.totalFare,
+      })
       setOptimizedSegments(optimizedResult.segments || [])
       setBoringSegments(boringResult.segments || [])
 
@@ -56,55 +70,15 @@ function App() {
       setOptimizedSegments([])
       setBoringSegments([])
     }
-  }, [originId, destinationId, ticketType])
+  }, [searchParams])
 
   useEffect(() => {
     if (routeResult) {
-      setMobilePanelExpanded(true)
+      setSheetHeight(window.innerHeight - 76)
     }
-  }, [routeResult])
+  }, [routeResult, setSheetHeight])
 
-  const handleMobileSheetPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return
 
-    mobileSheetDragStartY.current = event.clientY
-    mobileSheetDragged.current = false
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  const handleMobileSheetPointerMove = (event: PointerEvent<HTMLButtonElement>) => {
-    if (mobileSheetDragStartY.current === null) return
-
-    const deltaY = event.clientY - mobileSheetDragStartY.current
-    if (Math.abs(deltaY) > 8) {
-      mobileSheetDragged.current = true
-    }
-  }
-
-  const handleMobileSheetPointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
-    if (mobileSheetDragStartY.current === null) return
-
-    const deltaY = event.clientY - mobileSheetDragStartY.current
-    if (Math.abs(deltaY) > 32) {
-      setMobilePanelExpanded(deltaY < 0)
-      suppressNextMobileSheetClick.current = true
-    }
-
-    mobileSheetDragStartY.current = null
-    mobileSheetDragged.current = false
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-  }
-
-  const handleMobileSheetClick = () => {
-    if (suppressNextMobileSheetClick.current) {
-      suppressNextMobileSheetClick.current = false
-      return
-    }
-
-    setMobilePanelExpanded((expanded) => !expanded)
-  }
 
   return (
     <div className="app-root">
@@ -113,11 +87,24 @@ function App() {
         <div className="tab-nav-inner">
           <div className="tab-brand">
             <span className="tab-brand-icon">🚇</span>
-            <span className="tab-brand-text">{t(locale, 'appBrand')} <span className="tab-brand-accent">Tools</span></span>
+            <span className="tab-brand-text">{t(locale, 'appBrand')}</span>
           </div>
           <div className="tab-nav-actions">
-            <div className="tab-brand-sub">
-              {t(locale, 'appSubtitle')}
+            <div className="tab-nav-actions-group">
+              <button
+                type="button"
+                className="map-layer-toggle-button"
+                onClick={() => setMobileLayerControlsOpen((open) => !open)}
+                aria-expanded={mobileLayerControlsOpen}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                {t(locale, 'mapLayers')}
+              </button>
+              <AccessibilityFilter
+                filter={accessibilityFilter}
+                onFilterChange={setAccessibilityFilter}
+                locale={locale}
+              />
             </div>
             <div className="lang-switcher" aria-label={t(locale, 'language')}>
               {localeOptions.map((option) => (
@@ -138,46 +125,40 @@ function App() {
       {/* Unified Layout: Left Panel + Map */}
       <div className="unified-layout">
         {/* Left Panel: Controls + Results */}
-        <div className={`left-panel ${mobilePanelExpanded ? 'mobile-sheet-expanded' : ''}`}>
+        <div 
+          className="left-panel"
+          style={sheetHeight ? { height: `${sheetHeight}px` } : undefined}
+        >
           <button
             type="button"
             className="mobile-sheet-toggle"
-            onPointerDown={handleMobileSheetPointerDown}
-            onPointerMove={handleMobileSheetPointerMove}
-            onPointerUp={handleMobileSheetPointerEnd}
-            onPointerCancel={handleMobileSheetPointerEnd}
-            onClick={handleMobileSheetClick}
-            aria-expanded={mobilePanelExpanded}
+            {...dragHandlers}
           >
             <span className="mobile-sheet-grip" />
-            <span className="mobile-sheet-title">{t(locale, 'routePanel')}</span>
-            <span className="mobile-sheet-state">
-              {mobilePanelExpanded ? t(locale, 'collapsePanel') : t(locale, 'expandPanel')}
-            </span>
           </button>
           <div className="left-panel-inner">
             {/* Compact Header */}
             <header className="compact-header">
-              <h1>MTR Fare <span>{t(locale, 'heroAccent')}</span></h1>
+              <h1>{t(locale, 'heroTitle')}</h1>
               <p>"{t(locale, 'heroTagline')}"</p>
             </header>
             
             <ControlPanel 
-              originId={originId}
-              destinationId={destinationId}
-              ticketType={ticketType}
-              onOriginChange={setOriginId}
-              onDestinationChange={setDestinationId}
-              onTicketTypeChange={setTicketType}
+              originId={searchParams.originId}
+              destinationId={searchParams.destinationId}
+              ticketType={searchParams.ticketType}
+              onOriginChange={(id) => setSearchParams(prev => ({ ...prev, originId: id }))}
+              onDestinationChange={(id) => setSearchParams(prev => ({ ...prev, destinationId: id }))}
+              onTicketTypeChange={(type) => setSearchParams(prev => ({ ...prev, ticketType: type }))}
               locale={locale}
             />
 
-            {routeResult && displayedOriginId && displayedDestinationId && (
+            {routeResult && displayedRouteInfo.originId && displayedRouteInfo.destinationId && (
               <RouteVisualizer 
                 routeResult={routeResult} 
                 stations={stations}
-                directFare={directFare}
-                ticketType={displayedTicketType}
+                directFare={displayedRouteInfo.directFare}
+                ticketType={displayedRouteInfo.ticketType}
                 routeMode={routeMode}
                 onRouteModeChange={setRouteMode}
                 optimizedSegments={optimizedSegments}
@@ -192,11 +173,22 @@ function App() {
         <div className="right-panel">
           <MapView
             routeSegments={activeSegments.length > 0 ? activeSegments : undefined}
-            originId={displayedOriginId}
-            destinationId={displayedDestinationId}
+            originId={displayedRouteInfo.originId}
+            destinationId={displayedRouteInfo.destinationId}
             locale={locale}
+            showBuses={showBuses}
+            showBusStops={showBusStops}
+            showLRT={showLRT}
+            setShowBuses={setShowBuses}
+            setShowBusStops={setShowBusStops}
+            setShowLRT={setShowLRT}
+            mobileLayerControlsOpen={mobileLayerControlsOpen}
+            accessibilityFilter={accessibilityFilter}
           />
         </div>
+      </div>
+      <div className="global-map-attribution">
+        Leaflet | {t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank">{t(locale, 'landsDepartment')}</a> | {t(locale, 'dataSourcesLabel')} <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>, <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>
       </div>
     </div>
   )

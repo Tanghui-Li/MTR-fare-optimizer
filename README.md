@@ -26,7 +26,7 @@
 ```text
 Project/
 ├── src/
-│   ├── components/
+│   ├── components/                 // UI 视图组件库
 │   │   ├── MapView.tsx             // 核心地图容器，包含各种 Layer 与 Filter 的集成
 │   │   ├── StationPopup.tsx        // 港铁车站弹出卡 (列车班次 + 无障碍设施)
 │   │   ├── AccessibilityFilter.tsx // 无障碍设施条件筛选面板
@@ -34,15 +34,17 @@ Project/
 │   │   ├── BusStopLayer.tsx        // 港铁巴士固定站点渲染
 │   │   ├── LRTStationLayer.tsx     // 轻铁车站渲染
 │   │   └── LRTPopup.tsx            // 轻铁实时班次弹出卡
-│   ├── data/
-│   │   ├── accessibilityData.json  // 处理后的无障碍设施元数据
-│   │   ├── lrtStations.json        // 轻铁车站地理坐标数据
-│   │   ├── stationCoordinates.ts   // 港铁站坐标字典
-│   │   └── lineSegments.ts         // 用于绘制边级网络拓扑的文件
+│   ├── data/                       // 静态 JSON 及数据字典配置
+│   ├── hooks/                      // 自定义 React Hooks
+│   │   ├── useMapPolylines.ts      // 负责地图连线与边级网络拓扑计算
+│   │   └── useMobileSheetDrag.ts   // 负责移动端底部抽屉的拖拽交互逻辑
 │   ├── services/
-│   │   └── mtrApi.ts               // 封装所有 data.gov.hk REST API 的网络请求 (列车、巴士、轻铁)
-│   ├── pathfinder.ts               // Dijkstra 算法与路由寻路逻辑
-│   ├── routePlanner.ts             // 路径优化与 The Boring Way 切分逻辑
+│   │   └── mtrApi.ts               // 封装 data.gov.hk REST API
+│   ├── utils/                      // 核心算法与数据组装工厂
+│   │   ├── algorithms.ts           // BFS 与 Dijkstra 最短路径纯算法
+│   │   └── graphBuilder.ts         // 根据票制构建加权有向图，并附带缓存机制
+│   ├── pathfinder.ts               // 原始的单纯 MTR 寻路算法（兼容保留）
+│   ├── routePlanner.ts             // 寻路编排层：调度 graphBuilder 与 algorithms
 │   ├── App.tsx                     // 全局状态管理、左右面板布局
 │   └── index.css                   // UI 设计样式
 └── opendata/                       // 存放所有港府 Open Data 原始数据 CSV 及 PDF 文档
@@ -56,6 +58,22 @@ Project/
   * **静态结构数据**：通过本地 Python 脚本预处理 `opendata` 目录下的 CSV 文件生成。
   * **动态实时数据**：使用 Fetch API 直接与 `data.gov.hk` 的 CKAN REST API 交互（无第三方商业 API）。
 * **UI 样式**：自定义 Vanilla CSS 配合现代扁平化与半透明玻璃态设计。
+
+## 🏗️ 架构设计与状态流转 (Architecture & State Flow)
+
+为了便于小组后续协作，本项目在最新版本进行了深度的模块解耦：
+
+### 1. 表现层与业务逻辑分离
+- **自定义 Hooks**：
+  - `useMobileSheetDrag.ts` 抽象了底层 Pointer Events 的拖拽手势物理运算。
+  - `useMapPolylines.ts` 承载了复杂的基于点边拓扑坐标匹配运算，让 `MapView.tsx` 保持纯粹的“根据数据声明式渲染图层”的指责。
+- **状态统一管理**：
+  在 `App.tsx` 中，用户的“输入状态”和“当前渲染的路径状态”被严格区分（如 `searchParams` 与 `displayedRouteInfo`），以此避免在寻路算法执行的几十毫秒内出现 UI 抖动或闪烁。
+
+### 2. 寻路核心解耦 (`src/utils`)
+- **`graphBuilder.ts`**：专门处理由原始 CSV/JSON 转换来的异构交通数据（MTR、轻铁、巴士），将其转换为统一加权有向图（Weighted Directed Graph）。内部拥有对该结果的全局内存缓存机制。
+- **`algorithms.ts`**：纯粹的图论算法库。包含 `dijkstra` 最短路径与 `bfsPath` (由于部分边是逻辑连接，我们需要还原其沿途物理站点序列)。
+- **`routePlanner.ts`**：作为门面 (Facade)，调度 Builder 和 Algorithms，将结果包装成前端友好的 `DetailedSegment`。
 
 ## 📊 数据文件说明
 

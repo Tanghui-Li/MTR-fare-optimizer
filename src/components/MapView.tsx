@@ -6,13 +6,14 @@ import { stationCoordinates } from '../data/stationCoordinates';
 import { lineColors, getLocalizedLineName } from '../data/lineColors';
 import { lineSegments } from '../data/lineSegments';
 import { getStationLines } from '../services/mtrApi';
-import linesData from '../lines.json';
-import stationsData from '../stations.json';
+import linesData from '../data/lines.json';
+import stationsData from '../data/stations.json';
 import { StationMap, DetailedSegment, Locale } from '../types';
 import StationPopup from './StationPopup';
 import AccessibilityFilter from './AccessibilityFilter';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
+import { useMapPolylines } from '../hooks/useMapPolylines';
 import { t } from '../i18n';
 import { SlidersHorizontal } from 'lucide-react';
 
@@ -32,6 +33,14 @@ interface MapViewProps {
   originId?: string | null;
   destinationId?: string | null;
   locale: Locale;
+  showBuses: boolean;
+  showBusStops: boolean;
+  showLRT: boolean;
+  setShowBuses: (v: boolean) => void;
+  setShowBusStops: (v: boolean) => void;
+  setShowLRT: (v: boolean) => void;
+  mobileLayerControlsOpen: boolean;
+  accessibilityFilter: string[][];
 }
 
 /** Sub-component that handles fitBounds when route changes */
@@ -67,13 +76,24 @@ function RouteFitter({ routeSegments }: { routeSegments?: DetailedSegment[] }) {
   return null;
 }
 
-export default function MapView({ routeSegments, originId, destinationId, locale }: MapViewProps) {
-  const [showBuses, setShowBuses] = useState(true);
-  const [showBusStops, setShowBusStops] = useState(true);
-  const [showLRT, setShowLRT] = useState(true);
-  const [mobileLayerControlsOpen, setMobileLayerControlsOpen] = useState(false);
-  // Accessibility filter: array of clauses; each clause is a set of item codes (OR); all clauses must match (AND/CNF)
-  const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
+/** Sub-component that handles map resizing gracefully */
+function ResizeHandler() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
+export default function MapView({ 
+  routeSegments, originId, destinationId, locale,
+  showBuses, showBusStops, showLRT, setShowBuses, setShowBusStops, setShowLRT, mobileLayerControlsOpen,
+  accessibilityFilter
+}: MapViewProps) {
 
   // Compute highlighted stations based on accessibility filter (CNF)
   const highlightedStationIds = useMemo(() => {
@@ -92,108 +112,8 @@ export default function MapView({ routeSegments, originId, destinationId, locale
   // Compute which lines pass through each station
   const stationLines = useMemo(() => getStationLines(lines), []);
 
-  // Build polylines from edge-based topology (correct branch connections)
-  const edgePolylines = useMemo(() => {
-    const result: { lineCode: string; from: string; to: string; positions: [number, number][] }[] = [];
-    for (const [lineCode, edges] of Object.entries(lineSegments)) {
-      for (const [fromId, toId] of edges) {
-        const fromCoord = stationCoordinates[fromId];
-        const toCoord = stationCoordinates[toId];
-        if (fromCoord && toCoord) {
-          result.push({
-            lineCode,
-            from: fromId,
-            to: toId,
-            positions: [
-              [fromCoord.lat, fromCoord.lng],
-              [toCoord.lat, toCoord.lng],
-            ],
-          });
-        }
-      }
-    }
-    return result;
-  }, []);
-
-  // Build route highlight polylines from DetailedSegment[]
-  const routePolylines = useMemo(() => {
-    if (!routeSegments || routeSegments.length === 0) return [];
-
-    const result: {
-      segIndex: number;
-      lineCode: string;
-      positions: [number, number][];
-      isWalk: boolean;
-    }[] = [];
-
-    for (let si = 0; si < routeSegments.length; si++) {
-      const seg = routeSegments[si];
-      if (seg.path.length < 2) continue;
-
-      // Color each edge by the lineCode at its from-step to avoid switching one stop early.
-      let currentLine = '';
-      let currentPositions: [number, number][] = [];
-
-      for (let i = 0; i < seg.path.length - 1; i++) {
-        const fromStep = seg.path[i];
-        const toStep = seg.path[i + 1];
-        const fromCoord = getRouteNodeCoordinate(fromStep.stationId) || stationCoordinates[fromStep.stationId];
-        const toCoord = getRouteNodeCoordinate(toStep.stationId) || stationCoordinates[toStep.stationId];
-        if (!fromCoord || !toCoord) continue;
-
-        const edgeLine = fromStep.lineCode || toStep.lineCode || 'TRANSFER';
-
-        if (!currentLine) {
-          currentLine = edgeLine;
-          currentPositions = [
-            [fromCoord.lat, fromCoord.lng],
-            [toCoord.lat, toCoord.lng],
-          ];
-          continue;
-        }
-
-        if (edgeLine !== currentLine) {
-          if (currentPositions.length > 1) {
-            result.push({
-              segIndex: si,
-              lineCode: currentLine,
-              positions: [...currentPositions],
-              isWalk: currentLine === 'WALK',
-            });
-          }
-          currentLine = edgeLine;
-          currentPositions = [
-            [fromCoord.lat, fromCoord.lng],
-            [toCoord.lat, toCoord.lng],
-          ];
-        } else {
-          currentPositions.push([toCoord.lat, toCoord.lng]);
-        }
-      }
-
-      if (currentLine && currentPositions.length > 1) {
-        result.push({
-          segIndex: si,
-          lineCode: currentLine,
-          positions: currentPositions,
-          isWalk: currentLine === 'WALK',
-        });
-      }
-    }
-
-    return result;
-  }, [routeSegments]);
-
-  // Collect exit/re-enter stations (middle stops in multi-segment routes)
-  const exitReenterStations = useMemo(() => {
-    if (!routeSegments || routeSegments.length <= 1) return [];
-    // All segment boundaries except the very first and very last station
-    const result: string[] = [];
-    for (let i = 0; i < routeSegments.length - 1; i++) {
-      result.push(routeSegments[i].to);
-    }
-    return result;
-  }, [routeSegments]);
+  // Use decoupled hooks for polylines
+  const { edgePolylines, routePolylines, exitReenterStations } = useMapPolylines(routeSegments);
 
   // Deduplicated station list for markers
   const stationMarkers = useMemo(() => {
@@ -236,16 +156,7 @@ export default function MapView({ routeSegments, originId, destinationId, locale
   return (
     <div className="map-container">
       {/* Map Controls Bar */}
-      <div className="map-controls-bar">
-        <button
-          type="button"
-          className="map-layer-toggle-button"
-          onClick={() => setMobileLayerControlsOpen((open) => !open)}
-          aria-expanded={mobileLayerControlsOpen}
-        >
-          <SlidersHorizontal className="w-4 h-4" />
-          {t(locale, 'mapLayers')}
-        </button>
+      <div className={`map-controls-bar ${mobileLayerControlsOpen ? 'mobile-open' : ''}`}>
         <div className={`map-control-group ${mobileLayerControlsOpen ? 'mobile-open' : ''}`}>
           <label className="map-toggle">
             <input
@@ -294,28 +205,21 @@ export default function MapView({ routeSegments, originId, destinationId, locale
         </div>
       </div>
 
-      {/* Accessibility Filter Panel */}
-      <AccessibilityFilter
-        filter={accessibilityFilter}
-        onFilterChange={setAccessibilityFilter}
-        locale={locale}
-      />
-
       {/* Leaflet Map */}
       <MapContainer
         center={[22.32, 114.17]}
         zoom={12}
         className="leaflet-map"
         zoomControl={true}
-        attributionControl={true}
+        attributionControl={false}
       >
         {/* Auto-fit to route */}
+        <ResizeHandler />
         <RouteFitter routeSegments={routeSegments} />
 
         {/* HK Government Basemap Tiles (Lands Department) */}
         <TileLayer
           url="https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/WGS84/{z}/{x}/{y}.png"
-          attribution={`${t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank">${t(locale, 'landsDepartment')}</a>`}
           maxZoom={19}
           minZoom={9}
         />
@@ -465,13 +369,6 @@ export default function MapView({ routeSegments, originId, destinationId, locale
         </Suspense>
       </MapContainer>
 
-      {/* Data Source Attribution */}
-      <div className="map-attribution">
-        {t(locale, 'dataSourcesLabel')}
-        <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>
-        {' | '}
-        <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>
-      </div>
     </div>
   );
 }

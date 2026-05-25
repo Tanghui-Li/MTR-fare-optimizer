@@ -5,7 +5,7 @@ import { lineColors, getLocalizedLineName } from '../data/lineColors';
 import { StationMetadata, Locale, StationMap } from '../types';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { t } from '../i18n';
-import stationsData from '../stations.json';
+import stationsData from '../data/stations.json';
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;

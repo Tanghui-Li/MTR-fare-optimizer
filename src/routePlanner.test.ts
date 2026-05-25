@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import fareMatrixData from './fare_matrix.json';
+import fareMatrixData from './data/fare_matrix.json';
 import { findMultimodalRoute } from './routePlanner';
 import type { UnifiedFareMatrix } from './types';
 

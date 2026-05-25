@@ -164,6 +164,30 @@
   padding: 8px 0;
 }
 
+/* ===== Global Map Attribution ===== */
+.global-map-attribution {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 4px;
+  font-size: 10px;
+  text-align: right;
+  pointer-events: auto;
+  color: #333;
+}
+
+.global-map-attribution a {
+  color: #0078A8;
+  text-decoration: none;
+}
+
+.global-map-attribution a:hover {
+  text-decoration: underline;
+}
+
 .compact-header h1 {
   font-size: 24px;
   font-weight: 800;
@@ -1369,7 +1393,7 @@
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 900px) {
+@media (max-width: 900px), (max-height: 600px) {
   .app-root {
     height: 100vh;
     height: 100dvh;
@@ -1382,6 +1406,7 @@
     position: relative;
     flex: 1;
     min-height: 0;
+    flex-direction: column;
   }
 
   .tab-nav-inner {
@@ -1389,37 +1414,52 @@
     min-height: 52px;
     padding: 8px 12px;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .tab-nav-actions {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    flex: 1;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .tab-nav-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .lang-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .left-panel {
-    position: fixed;
-    z-index: 900;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
+    position: relative;
+    order: 2;
     width: auto;
     min-width: 0;
     max-width: none;
-    height: clamp(400px, 52vh, 500px);
-    height: clamp(400px, 52dvh, 500px);
+    flex-shrink: 0;
+    height: 400px; /* default height, overridden by inline style */
     max-height: calc(100vh - 76px);
     max-height: calc(100dvh - 76px);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-panel) var(--radius-panel) var(--radius-card) var(--radius-card);
+    border: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
     overflow: hidden;
-    box-shadow: var(--shadow-sheet);
-    transition: height 0.22s ease;
+    box-shadow: none;
+    /* remove height transition to allow smooth pointer dragging */
+    transition: transform 0.22s ease;
   }
 
-  .left-panel.mobile-sheet-expanded {
-    height: calc(100vh - 76px);
-    height: calc(100dvh - 76px);
+
+
+  .right-panel {
+    order: 1;
   }
 
   .mobile-sheet-toggle {
@@ -1448,18 +1488,7 @@
     background: var(--color-control);
   }
 
-  .mobile-sheet-title {
-    margin-top: 8px;
-    font-size: 13px;
-    font-weight: 800;
-  }
 
-  .mobile-sheet-state {
-    margin-top: 8px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--color-text-muted);
-  }
 
   .left-panel-inner {
     height: calc(100% - 42px);
@@ -1543,12 +1572,30 @@
   }
 
   .map-controls-bar {
+    display: none;
     padding: 6px 8px;
+    border-bottom: 1px solid var(--color-border);
   }
 
+  .map-controls-bar.mobile-open {
+    display: flex;
+  }
+
+  /* Style for layer toggle button in header */
   .map-layer-toggle-button {
     display: inline-flex;
+    height: 28px;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    font-size: 11px;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
   }
+
 
   .map-control-group {
     display: none;
@@ -1787,15 +1834,15 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border: none;
+  border: 1px solid #e2e8f0;
   background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-  border-bottom: 1px solid #e2e8f0;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #6d28d9;
-  width: 100%;
+  width: auto;
   transition: background 0.15s;
 }
 
@@ -1827,11 +1874,19 @@
 }
 
 .acc-filter-content {
-  padding: 8px 12px 12px;
-  background: #fafafa;
-  border-bottom: 1px solid #e2e8f0;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: max-content;
+  max-width: 320px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sheet);
   max-height: 340px;
   overflow-y: auto;
+  z-index: 1000;
 }
 
 .acc-filter-content::-webkit-scrollbar {

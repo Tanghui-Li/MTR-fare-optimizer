@@ -65,3 +65,20 @@ export interface DetailedSegment {
   lineLabel?: string;
   mode?: TransportMode;
 }
+
+export interface GraphEdge {
+  from: string;
+  to: string;
+  fare: number;
+  mode: TransportMode;
+  lineCode: string;
+  busKey?: string;
+}
+
+export interface GraphState {
+  nodeId: string;
+  usedMask: number;
+  totalFare: number;
+  previousKey: string | null;
+  viaEdge: GraphEdge | null;
+}

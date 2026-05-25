@@ -10,7 +10,7 @@ const localeText = {
   'zh-Hant': {
     appBrand: 'MTR 工具',
     appSubtitle: '票價計算 · 路線規劃 · 實時地圖',
-    heroTitle: 'MTR Fare Optimizer',
+    heroTitle: '港鐵票價優化器',
     heroAccent: 'Optimizer',
     heroTagline: '因為能省就省，尤其是票價。',
     routePanel: '路線規劃',
@@ -172,7 +172,7 @@ const localeText = {
   'zh-Hans': {
     appBrand: 'MTR 工具',
     appSubtitle: '票价计算 · 路线规划 · 实时地图',
-    heroTitle: 'MTR Fare Optimizer',
+    heroTitle: '港铁票价优化器',
     heroAccent: 'Optimizer',
     heroTagline: '因为能省就省，尤其是票价。',
     routePanel: '路线规划',
