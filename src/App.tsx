@@ -13,6 +13,16 @@ import { useMobileSheetDrag } from './hooks/useMobileSheetDrag'
 
 const stations = unifiedStationMap as StationMap
 type RouteMode = 'optimized' | 'boring';
+const MOBILE_SHEET_QUERY = '(max-width: 900px), ((max-height: 600px) and (hover: none) and (pointer: coarse))';
+
+function getRouteSheetHeight() {
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const preferredHeight = Math.round(viewportHeight * 0.58);
+  const maxHeight = Math.max(180, viewportHeight - 180);
+  const minHeight = Math.min(320, maxHeight);
+
+  return Math.max(minHeight, Math.min(preferredHeight, maxHeight));
+}
 
 function App() {
   const [searchParams, setSearchParams] = useState({
@@ -73,8 +83,26 @@ function App() {
   }, [searchParams])
 
   useEffect(() => {
-    if (routeResult) {
-      setSheetHeight(window.innerHeight - 76)
+    if (!routeResult) {
+      setSheetHeight(null)
+      return
+    }
+
+    const updateSheetHeight = () => {
+      if (window.matchMedia(MOBILE_SHEET_QUERY).matches) {
+        setSheetHeight(getRouteSheetHeight())
+      } else {
+        setSheetHeight(null)
+      }
+    }
+
+    updateSheetHeight()
+    window.addEventListener('resize', updateSheetHeight)
+    window.visualViewport?.addEventListener('resize', updateSheetHeight)
+
+    return () => {
+      window.removeEventListener('resize', updateSheetHeight)
+      window.visualViewport?.removeEventListener('resize', updateSheetHeight)
     }
   }, [routeResult, setSheetHeight])
 
@@ -185,10 +213,10 @@ function App() {
             mobileLayerControlsOpen={mobileLayerControlsOpen}
             accessibilityFilter={accessibilityFilter}
           />
+          <div className="global-map-attribution">
+            Leaflet | {t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank" rel="noopener noreferrer">{t(locale, 'landsDepartment')}</a> | {t(locale, 'dataSourcesLabel')} <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>, <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>
+          </div>
         </div>
-      </div>
-      <div className="global-map-attribution">
-        Leaflet | {t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank" rel="noopener noreferrer">{t(locale, 'landsDepartment')}</a> | {t(locale, 'dataSourcesLabel')} <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>, <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>
       </div>
     </div>
   )

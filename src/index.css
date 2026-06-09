@@ -156,6 +156,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  position: relative;
 }
 
 /* ===== Compact Header ===== */
@@ -1393,7 +1394,7 @@
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 900px), (max-height: 600px) {
+@media (max-width: 900px), ((max-height: 600px) and (hover: none) and (pointer: coarse)) {
   .app-root {
     height: 100vh;
     height: 100dvh;
@@ -1544,6 +1545,13 @@
     min-height: 0;
   }
 
+  .global-map-attribution {
+    font-size: 9px;
+    line-height: 1.25;
+    padding: 3px 6px;
+    text-align: center;
+  }
+
   .tab-brand-sub {
     display: none;
   }
@@ -1654,6 +1662,42 @@
 
   .acc-filter-clear-btn {
     width: 100%;
+  }
+
+  .station-dropdown-menu {
+    position: fixed !important;
+    top: calc(84px + env(safe-area-inset-top)) !important;
+    right: 12px !important;
+    bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+    display: flex;
+    flex-direction: column;
+    max-height: none;
+    margin-top: 0 !important;
+    border-radius: 16px;
+    z-index: 2000;
+  }
+
+  .station-dropdown-list {
+    flex: 1;
+    max-height: none !important;
+  }
+
+  .station-dropdown-menu input {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .route-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .swap-station-row {
+    position: static;
+    margin: -2px 0;
+    transform: none;
   }
 }
 

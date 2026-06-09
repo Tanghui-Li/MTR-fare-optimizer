@@ -95,7 +95,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-900 overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="station-dropdown-menu absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-900 overflow-hidden animate-in fade-in zoom-in duration-200">
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -129,7 +129,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
               />
             </div>
           </div>
-          <div id={listboxId} role="listbox" aria-labelledby={triggerId} className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+          <div id={listboxId} role="listbox" aria-labelledby={triggerId} className="station-dropdown-list max-h-60 overflow-y-auto p-1 custom-scrollbar">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((s, index) => (
                 <button
