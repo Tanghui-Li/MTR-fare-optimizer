@@ -6,8 +6,21 @@ import busStopNamesData from '../data/busStopNames.json';
 import { Locale } from '../types';
 import { t } from '../i18n';
 import { cleanBusArrivalText } from '../data/unifiedNetwork';
+import { getLocalizedText } from '../data/zhHansText';
 
 const busStopNames = busStopNamesData as Record<string, { zh: string; en: string }>;
+
+function localizeBusTimeText(text: string, locale: Locale): string {
+  if (locale !== 'zh-Hans') return text;
+  const statusMap: Record<string, string> = {
+    '即將開出': '即将开出',
+    '已離開': '已离开',
+    '行駛中': '行驶中',
+    '到達': '到达',
+    '已到達': '已到达',
+  };
+  return statusMap[text] ?? text;
+}
 
 interface BusVehicle {
   busId: string;
@@ -40,7 +53,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
           for (const stop of data.busStop) {
             const stopId = stop.busStopId || '';
             const stopInfo = busStopNames[stopId];
-            const stopName = stopInfo?.zh || stopId;
+            const stopName = stopInfo ? getLocalizedText(stopInfo, locale) : stopId;
             
             for (const bus of stop.bus || []) {
               if (
@@ -70,7 +83,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
                       lat,
                       lng,
                       nextStopName: stopName,
-                      timeText: cleanBusArrivalText(bus.departureTimeText || '行駛中'),
+                      timeText: localizeBusTimeText(cleanBusArrivalText(bus.departureTimeText || '行駛中'), locale),
                       isDelayed: bus.isDelayed === '1',
                       remark: bus.busRemark || '',
                       arrivalTimeInSecond: arrivalSeconds
@@ -88,7 +101,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
 
     await Promise.all(fetchPromises);
     setVehicles(Array.from(vehicleMap.values()));
-  }, [map]);
+  }, [map, locale]);
 
   useEffect(() => {
     fetchAllBuses();

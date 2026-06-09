@@ -4,6 +4,7 @@ import { stationCoordinates as stationCoordinatesData } from './stationCoordinat
 import lrtStationsData from './lrtStations.json';
 import busStopNamesData from './busStopNames.json';
 import { getLocalizedLineName } from './lineColors';
+import { getLocalizedText, getZhHansText } from './zhHansText';
 
 import lightRailFaresCsv from '../../opendata/light_rail_fares.csv?raw';
 import lightRailRoutesCsv from '../../opendata/light_rail_routes_and_stops.csv?raw';
@@ -20,6 +21,7 @@ export interface UnifiedNode {
   kind: NodeKind;
   category: TransportMode;
   zh: string;
+  zhHans?: string;
   en: string;
   lat: number;
   lng: number;
@@ -37,6 +39,7 @@ export interface LineDefinition {
 export interface StationOption {
   id: string;
   zh: string;
+  zhHans?: string;
   en: string;
   category: TransportMode;
 }
@@ -46,6 +49,7 @@ interface BusStopLocation {
   lat: number;
   lng: number;
   zh: string;
+  zhHans?: string;
   en: string;
   routes: string[];
 }
@@ -182,6 +186,7 @@ function buildBusStopLocationsWithMerge(rows: CsvRow[]): {
         lat: avgLat,
         lng: avgLng,
         zh: canonical.zh,
+        zhHans: getZhHansText(canonical.zh),
         en: canonical.en,
         routes: Array.from(allRoutes),
         // direction is dropped — merged stops have no single direction
@@ -238,7 +243,7 @@ export function getLineFilterOptions(): LineDefinition[] {
 
 export const mtrStationNames = stationsData as Record<string, { zh: string; en: string }>;
 export const mtrCoordinates = stationCoordinatesData as Record<string, { lat: number; lng: number }>;
-export const lrtStations = lrtStationsData as Record<string, { id: string; zh: string; en: string; lat: number; lng: number }>;
+export const lrtStations = lrtStationsData as Record<string, { id: string; zh: string; zhHans?: string; en: string; lat: number; lng: number }>;
 const _busStopMergeResult = buildBusStopLocationsWithMerge(rawBusStopRows);
 export const busStopLocations = _busStopMergeResult.locations;
 /** Maps every original STATION_ID → canonical merged STATION_ID */
@@ -277,6 +282,7 @@ function buildNodeCatalog() {
       kind: 'mtr',
       category: 'MTR',
       zh: info.zh,
+      zhHans: getZhHansText(info.zh),
       en: info.en,
       lat: coord.lat,
       lng: coord.lng,
@@ -290,6 +296,7 @@ function buildNodeCatalog() {
       kind: 'lrt',
       category: 'LRT',
       zh: info.zh,
+      zhHans: info.zhHans ?? getZhHansText(info.zh),
       en: info.en,
       lat: info.lat,
       lng: info.lng,
@@ -303,6 +310,7 @@ function buildNodeCatalog() {
       kind: 'bus',
       category: getBusRouteMode(stop.routes[0] ?? ''),
       zh: stop.zh,
+      zhHans: stop.zhHans,
       en: stop.en,
       lat: stop.lat,
       lng: stop.lng,
@@ -315,8 +323,8 @@ function buildNodeCatalog() {
 
 export const nodeCatalog = buildNodeCatalog();
 
-export const unifiedStationMap: Record<string, { zh: string; en: string }> = Object.fromEntries(
-  Array.from(nodeCatalog.values()).map((node) => [node.id, { zh: node.zh, en: node.en }]),
+export const unifiedStationMap: Record<string, { zh: string; zhHans?: string; en: string }> = Object.fromEntries(
+  Array.from(nodeCatalog.values()).map((node) => [node.id, { zh: node.zh, zhHans: node.zhHans, en: node.en }]),
 );
 
 export const unifiedStationCoordinates: Record<string, { lat: number; lng: number }> = Object.fromEntries(
@@ -335,22 +343,22 @@ export function getNodeCoordinates(id: string): { lat: number; lng: number } | u
 export function getNodeLabel(id: string, locale: 'zh-Hant' | 'en' | 'zh-Hans'): string {
   const node = nodeCatalog.get(id);
   if (!node) return id;
-  if (locale === 'en') return node.en || node.zh;
-  return node.zh || node.en || id;
+  return getLocalizedText(node, locale) || id;
 }
 
 export function getSelectableStations(lineCode: string): StationOption[] {
   const options: StationOption[] = [];
 
-  const getBusStopDisplayNames = (node: UnifiedNode): { zh: string; en: string } => {
+  const getBusStopDisplayNames = (node: UnifiedNode): { zh: string; zhHans?: string; en: string } => {
     const raw = node.sourceId ? busStopLocationLookup.get(node.sourceId) : undefined;
-    if (!raw) return { zh: node.zh, en: node.en };
+    if (!raw) return { zh: node.zh, zhHans: node.zhHans, en: node.en };
 
     const routeLabel = raw.routes.length > 0 ? raw.routes.join('/') : '';
-    if (!routeLabel) return { zh: node.zh, en: node.en };
+    if (!routeLabel) return { zh: node.zh, zhHans: node.zhHans, en: node.en };
 
     return {
       zh: `${node.zh} (${routeLabel})`,
+      zhHans: node.zhHans ? `${node.zhHans} (${routeLabel})` : undefined,
       en: `${node.en} (${routeLabel})`,
     };
   };
@@ -358,7 +366,7 @@ export function getSelectableStations(lineCode: string): StationOption[] {
   if (lineCode === 'LRT') {
     for (const node of nodeCatalog.values()) {
       if (node.kind === 'lrt') {
-        options.push({ id: node.id, zh: node.zh, en: node.en, category: 'LRT' });
+        options.push({ id: node.id, zh: node.zh, zhHans: node.zhHans, en: node.en, category: 'LRT' });
       }
     }
     return options;
@@ -368,7 +376,7 @@ export function getSelectableStations(lineCode: string): StationOption[] {
     for (const node of nodeCatalog.values()) {
       if (node.kind === 'bus' && node.category === lineCode) {
         const display = getBusStopDisplayNames(node);
-        options.push({ id: node.id, zh: display.zh, en: display.en, category: lineCode as TransportMode });
+        options.push({ id: node.id, zh: display.zh, zhHans: display.zhHans, en: display.en, category: lineCode as TransportMode });
       }
     }
     return options;
@@ -378,9 +386,9 @@ export function getSelectableStations(lineCode: string): StationOption[] {
     for (const node of nodeCatalog.values()) {
       if (node.kind === 'bus') {
         const display = getBusStopDisplayNames(node);
-        options.push({ id: node.id, zh: display.zh, en: display.en, category: node.category });
+        options.push({ id: node.id, zh: display.zh, zhHans: display.zhHans, en: display.en, category: node.category });
       } else {
-        options.push({ id: node.id, zh: node.zh, en: node.en, category: node.category });
+        options.push({ id: node.id, zh: node.zh, zhHans: node.zhHans, en: node.en, category: node.category });
       }
     }
     options.sort((a, b) => a.zh.localeCompare(b.zh, 'zh-HK'));
@@ -391,7 +399,7 @@ export function getSelectableStations(lineCode: string): StationOption[] {
   for (const stationId of lineStations) {
     const node = nodeCatalog.get(stationId);
     if (node) {
-      options.push({ id: node.id, zh: node.zh, en: node.en, category: 'MTR' });
+      options.push({ id: node.id, zh: node.zh, zhHans: node.zhHans, en: node.en, category: 'MTR' });
     }
   }
   return options;
@@ -559,4 +567,3 @@ export function cleanBusArrivalText(text: string): string {
   }
   return trimmed;
 }
-

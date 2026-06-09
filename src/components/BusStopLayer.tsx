@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { CircleMarker, Tooltip } from 'react-leaflet';
 import { busStopLocations } from '../data/unifiedNetwork';
 import { Locale } from '../types';
+import { getLocalizedText } from '../data/zhHansText';
 
 interface BusStopLayerProps {
   locale: Locale;
@@ -30,7 +31,7 @@ export default function BusStopLayer({ locale }: BusStopLayerProps) {
             className="bus-stop-tooltip"
           >
             <div className="bus-stop-tooltip-content">
-              <div className="bus-stop-tooltip-name">{locale === 'en' ? stop.en : stop.zh}</div>
+              <div className="bus-stop-tooltip-name">{getLocalizedText(stop, locale)}</div>
               {stop.en && locale !== 'en' && (
                 <div className="bus-stop-tooltip-name-en">{stop.en}</div>
               )}

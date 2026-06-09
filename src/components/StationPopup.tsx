@@ -6,6 +6,7 @@ import { StationMetadata, Locale, StationMap } from '../types';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { t } from '../i18n';
 import stationsData from '../data/stations.json';
+import { getLocalizedText, getSecondaryLocalizedText } from '../data/zhHansText';
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
@@ -103,7 +104,7 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
     const destStationId = stationCodeToId[destCode];
     const destStation = destStationId ? stationCatalog[destStationId] : undefined;
     if (destStation) {
-      return locale === 'en' ? destStation.en : destStation.zh;
+      return getLocalizedText(destStation, locale);
     }
 
     const fallback: Record<string, { zh: string; en: string }> = {
@@ -116,7 +117,7 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
       WKS: { zh: '烏溪沙', en: 'Wu Kai Sha' }, AIR: { zh: '機場', en: 'Airport' }, AWE: { zh: '博覽館', en: 'AsiaWorld-Expo' },
       SOH: { zh: '海怡半島', en: 'South Horizons' }, SUN: { zh: '欣澳', en: 'Sunny Bay' }, TSY: { zh: '青衣', en: 'Tsing Yi' },
     };
-    return fallback[destCode]?.[locale === 'en' ? 'en' : 'zh'] || destCode;
+    return fallback[destCode] ? getLocalizedText(fallback[destCode], locale) : destCode;
   };
 
   // Build accessibility info grouped by category
@@ -162,8 +163,8 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
       <div className="popup-content">
         {/* Station header */}
         <div className="popup-header">
-          <h3 className="popup-station-name">{locale === 'en' ? station.en : station.zh}</h3>
-          {locale !== 'en' && <span className="popup-station-name-en">{station.en}</span>}
+          <h3 className="popup-station-name">{getLocalizedText(station, locale)}</h3>
+          {locale !== 'en' && <span className="popup-station-name-en">{getSecondaryLocalizedText(station, locale)}</span>}
           <div className="popup-line-tags">
             {lines.map(line => (
               <span
@@ -240,16 +241,18 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
                     <div key={catId} className="popup-acc-category">
                       <div className="popup-acc-category-header">
                         <span className="popup-acc-category-icon">{categoryIcons[catId]}</span>
-                        <span className="popup-acc-category-name">{locale === 'en' ? group.catEn : group.catZh}</span>
+                        <span className="popup-acc-category-name">
+                          {locale === 'en' ? group.catEn : getLocalizedText({ zh: group.catZh, en: group.catEn }, locale)}
+                        </span>
                       </div>
                       <div className="popup-acc-items">
                         {group.items.map(item => (
                           <div key={item.code} className="popup-acc-item">
                             <span className="popup-acc-check">✓</span>
                             <div className="popup-acc-item-text">
-                              <span className="popup-acc-item-name">{locale === 'en' ? item.en : item.zh}</span>
+                              <span className="popup-acc-item-name">{getLocalizedText(item, locale)}</span>
                               {item.detail && (item.detail.zh || item.detail.en) && (
-                                <span className="popup-acc-item-detail">{locale === 'en' ? item.detail.en : item.detail.zh}</span>
+                                <span className="popup-acc-item-detail">{getLocalizedText(item.detail, locale)}</span>
                               )}
                             </div>
                           </div>

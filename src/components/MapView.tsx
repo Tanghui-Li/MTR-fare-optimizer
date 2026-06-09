@@ -13,6 +13,7 @@ import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
 import { useMapPolylines } from '../hooks/useMapPolylines';
 import { t } from '../i18n';
+import { getLocalizedText, getSecondaryLocalizedText } from '../data/zhHansText';
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
@@ -342,10 +343,10 @@ export default function MapView({
                 className="station-tooltip"
               >
                 <div>
-                  <strong>{stations[marker.id]?.zh || ''}</strong>
+                  <strong>{stations[marker.id] ? getLocalizedText(stations[marker.id], locale) : ''}</strong>
                   <br />
                   <span style={{ opacity: 0.7, fontSize: '11px' }}>
-                    {stations[marker.id]?.en || ''}
+                    {stations[marker.id] ? getSecondaryLocalizedText(stations[marker.id], locale) : ''}
                   </span>
                   {role === 'origin' && <><br /><span style={{ color: '#16a34a', fontWeight: 600, fontSize: '11px' }}>🟢 {locale === 'en' ? 'Origin' : locale === 'zh-Hans' ? '起点' : '起點'}</span></>}
                   {role === 'destination' && <><br /><span style={{ color: '#dc2626', fontWeight: 600, fontSize: '11px' }}>🔴 {locale === 'en' ? 'Destination' : locale === 'zh-Hans' ? '终点' : '終點'}</span></>}

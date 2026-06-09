@@ -3,6 +3,7 @@ import { StationMap, StationMetadata, DetailedSegment, PathStep, Locale } from '
 import { lineColors, getLocalizedLineName } from '../data/lineColors'
 import { ArrowRight, MapPin, LogIn, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatCurrency, t } from '../i18n'
+import { getLocalizedText } from '../data/zhHansText'
 
 interface DirectRouteCardProps {
   fare: number
@@ -48,7 +49,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
 
   const displayName = (station?: StationMetadata) => {
     if (!station) return '';
-    return locale === 'en' ? station.en : station.zh;
+    return getLocalizedText(station, locale);
   };
 
   const getStationTypeLabel = (stationId: string) => {

@@ -6,6 +6,7 @@
 export interface StationMetadata {
   zh: string;
   en: string;
+  zhHans?: string;
 }
 
 export interface StationMap {

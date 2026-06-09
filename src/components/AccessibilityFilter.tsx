@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { Locale } from '../types';
 import { t } from '../i18n';
+import { getLocalizedText } from '../data/zhHansText';
 
 const accessibilityData = accessibilityRaw as {
   categories: Record<string, { catId: string; catZh: string; catEn: string; zh: string; en: string; order: number }>;
@@ -93,7 +94,7 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
   };
 
   const hasFilter = filter.length > 0;
-  const localName = (value: { zh: string; en: string }) => (locale === 'en' ? value.en : value.zh);
+  const localName = (value: { zh: string; en: string }) => getLocalizedText(value, locale);
 
   return (
     <div className={`acc-filter-panel ${expanded ? 'expanded' : ''}`}>
@@ -145,7 +146,9 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
                   <div key={catId} className="acc-filter-cat">
                     <div className="acc-filter-cat-header">
                       <span>{categoryIcons[catId]}</span>
-                      <span className="acc-filter-cat-name">{locale === 'en' ? group.catEn : group.catZh}</span>
+                      <span className="acc-filter-cat-name">
+                        {locale === 'en' ? group.catEn : getLocalizedText({ zh: group.catZh, en: group.catEn }, locale)}
+                      </span>
                     </div>
                     <div className="acc-filter-cat-items">
                       {group.items.map(item => (
@@ -206,7 +209,9 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
                       <div key={catId} className="acc-filter-cat">
                         <div className="acc-filter-cat-header">
                           <span>{categoryIcons[catId]}</span>
-                          <span className="acc-filter-cat-name">{locale === 'en' ? group.catEn : group.catZh}</span>
+                          <span className="acc-filter-cat-name">
+                            {locale === 'en' ? group.catEn : getLocalizedText({ zh: group.catZh, en: group.catEn }, locale)}
+                          </span>
                         </div>
                         <div className="acc-filter-cat-items">
                           {group.items.map(item => (

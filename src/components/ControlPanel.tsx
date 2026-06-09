@@ -4,6 +4,7 @@ import { Search, CreditCard, Ticket, ChevronDown, ArrowRightLeft } from 'lucide-
 import { getLineFilterOptions, getSelectableStations, getLocalizedLineDefinitionLabel } from '../data/unifiedNetwork'
 import { Locale } from '../types'
 import { t } from '../i18n'
+import { getLocalizedText } from '../data/zhHansText'
 
 interface SearchableDropdownProps {
   label: string
@@ -36,11 +37,13 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
 
   const selectedStation = options.find(o => o.id === value)
   const filteredOptions = options.filter(o => 
-    o.zh.includes(search) || o.en.toLowerCase().includes(search.toLowerCase())
+    getLocalizedText(o, locale).includes(search) ||
+    o.zh.includes(search) ||
+    o.en.toLowerCase().includes(search.toLowerCase())
   )
   const stationText = (station?: { zh: string; en: string }) => {
     if (!station) return ''
-    return locale === 'en' ? station.en : station.zh
+    return getLocalizedText(station, locale)
   }
   const noStationText = locale === 'en' ? 'No stations found' : locale === 'zh-Hans' ? '没有找到车站' : '找不到車站'
   const activeOptionId = filteredOptions[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined
@@ -144,7 +147,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                     value === s.id || activeIndex === index ? `${styles.bg} ${styles.text} font-bold` : 'hover:bg-gray-50'
                   } w-full text-left`}
                 >
-                  <div className="text-sm">{locale === 'en' ? s.en : s.zh}</div>
+                  <div className="text-sm">{getLocalizedText(s, locale)}</div>
                 </button>
               ))
             ) : (
@@ -188,7 +191,7 @@ const ControlPanel = ({
     }))
 
     if (lineCode === 'ALL') {
-      result.sort((a, b) => (locale === 'en' ? a.en : a.zh).localeCompare(locale === 'en' ? b.en : b.zh, locale === 'en' ? 'en' : 'zh-HK'))
+      result.sort((a, b) => getLocalizedText(a, locale).localeCompare(getLocalizedText(b, locale), locale === 'en' ? 'en' : 'zh-HK'))
     }
     return result
   }
