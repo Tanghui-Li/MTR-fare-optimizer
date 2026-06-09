@@ -3,24 +3,21 @@ import { DetailedSegment } from '../types';
 import { lineSegments } from '../data/lineSegments';
 import { stationCoordinates } from '../data/stationCoordinates';
 import { getRouteNodeCoordinate } from '../routePlanner';
+import { appendPolylinePositions, getLineEdgePositions, PolylinePosition } from '../utils/polylineGeometry';
 
 export function useMapPolylines(routeSegments?: DetailedSegment[]) {
   // Build polylines from edge-based topology (correct branch connections)
   const edgePolylines = useMemo(() => {
-    const result: { lineCode: string; from: string; to: string; positions: [number, number][] }[] = [];
+    const result: { lineCode: string; from: string; to: string; positions: PolylinePosition[] }[] = [];
     for (const [lineCode, edges] of Object.entries(lineSegments)) {
       for (const [fromId, toId] of edges) {
-        const fromCoord = stationCoordinates[fromId];
-        const toCoord = stationCoordinates[toId];
-        if (fromCoord && toCoord) {
+        const positions = getLineEdgePositions(lineCode, fromId, toId, stationCoordinates);
+        if (positions.length >= 2) {
           result.push({
             lineCode,
             from: fromId,
             to: toId,
-            positions: [
-              [fromCoord.lat, fromCoord.lng],
-              [toCoord.lat, toCoord.lng],
-            ],
+            positions,
           });
         }
       }
@@ -35,7 +32,7 @@ export function useMapPolylines(routeSegments?: DetailedSegment[]) {
     const result: {
       segIndex: number;
       lineCode: string;
-      positions: [number, number][];
+      positions: PolylinePosition[];
       isWalk: boolean;
     }[] = [];
 
@@ -44,7 +41,7 @@ export function useMapPolylines(routeSegments?: DetailedSegment[]) {
       if (seg.path.length < 2) continue;
 
       let currentLine = '';
-      let currentPositions: [number, number][] = [];
+      let currentPositions: PolylinePosition[] = [];
 
       for (let i = 0; i < seg.path.length - 1; i++) {
         const fromStep = seg.path[i];
@@ -54,13 +51,17 @@ export function useMapPolylines(routeSegments?: DetailedSegment[]) {
         if (!fromCoord || !toCoord) continue;
 
         const edgeLine = fromStep.lineCode || toStep.lineCode || 'TRANSFER';
+        const edgePositions = getLineEdgePositions(edgeLine, fromStep.stationId, toStep.stationId, stationCoordinates);
+        const positions = edgePositions.length >= 2
+          ? edgePositions
+          : [
+              [fromCoord.lat, fromCoord.lng],
+              [toCoord.lat, toCoord.lng],
+            ] as PolylinePosition[];
 
         if (!currentLine) {
           currentLine = edgeLine;
-          currentPositions = [
-            [fromCoord.lat, fromCoord.lng],
-            [toCoord.lat, toCoord.lng],
-          ];
+          currentPositions = positions;
           continue;
         }
 
@@ -74,12 +75,9 @@ export function useMapPolylines(routeSegments?: DetailedSegment[]) {
             });
           }
           currentLine = edgeLine;
-          currentPositions = [
-            [fromCoord.lat, fromCoord.lng],
-            [toCoord.lat, toCoord.lng],
-          ];
+          currentPositions = positions;
         } else {
-          currentPositions.push([toCoord.lat, toCoord.lng]);
+          currentPositions = appendPolylinePositions(currentPositions, positions);
         }
       }
 

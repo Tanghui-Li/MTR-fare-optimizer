@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, type PointerEvent } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import ControlPanel from './components/ControlPanel'
 import RouteVisualizer from './components/RouteVisualizer'
 import MapView from './components/MapView'
@@ -6,7 +6,7 @@ import AccessibilityFilter from './components/AccessibilityFilter'
 import { findMultimodalRoute } from './routePlanner'
 import { unifiedStationMap } from './data/unifiedNetwork'
 import { getFareMatrix } from './data/mtrFareMatrix'
-import { RouteResult, StationMap, TicketType, FareMatrix, DetailedSegment, Locale } from './types'
+import { RouteResult, StationMap, TicketType, DetailedSegment, Locale } from './types'
 import { localeOptions, t } from './i18n'
 import { SlidersHorizontal } from 'lucide-react'
 import { useMobileSheetDrag } from './hooks/useMobileSheetDrag'
@@ -188,7 +188,7 @@ function App() {
         </div>
       </div>
       <div className="global-map-attribution">
-        Leaflet | {t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank">{t(locale, 'landsDepartment')}</a> | {t(locale, 'dataSourcesLabel')} <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>, <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>
+        Leaflet | {t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank" rel="noopener noreferrer">{t(locale, 'landsDepartment')}</a> | {t(locale, 'dataSourcesLabel')} <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>, <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>
       </div>
     </div>
   )

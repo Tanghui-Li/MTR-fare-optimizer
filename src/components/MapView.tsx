@@ -1,21 +1,18 @@
-import { lazy, Suspense, useMemo, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useMemo, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { stationCoordinates } from '../data/stationCoordinates';
 import { lineColors, getLocalizedLineName } from '../data/lineColors';
-import { lineSegments } from '../data/lineSegments';
 import { getStationLines } from '../services/mtrApi';
 import linesData from '../data/lines.json';
 import stationsData from '../data/stations.json';
 import { StationMap, DetailedSegment, Locale } from '../types';
 import StationPopup from './StationPopup';
-import AccessibilityFilter from './AccessibilityFilter';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
 import { useMapPolylines } from '../hooks/useMapPolylines';
 import { t } from '../i18n';
-import { SlidersHorizontal } from 'lucide-react';
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;

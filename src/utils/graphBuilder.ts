@@ -142,10 +142,14 @@ export function getMtrLineCodeBetween(from: string, to: string, fallback: string
   if (!candidates || candidates.length === 0) return fallback;
   if (preferred && candidates.includes(preferred)) return preferred;
   if (candidates.includes(fallback)) return fallback;
+  if (fallback === 'MTR') {
+    const nonAelCandidate = candidates.find((lineCode) => lineCode !== 'AEL');
+    if (nonAelCandidate) return nonAelCandidate;
+  }
   return candidates[0];
 }
 
-export function expandMtrEdge(startId: string, endId: string): string[] {
+export function expandMtrEdge(startId: string, endId: string, allowAirportExpress = true): string[] {
   if (startId === endId) return [startId];
 
   interface MtrState {
@@ -206,7 +210,8 @@ export function expandMtrEdge(startId: string, endId: string): string[] {
 
     const neighbors = mtrAdjacency.get(current.nodeId) || new Set();
     for (const next of neighbors) {
-      const lines = mtrEdgeLines.get(`${current.nodeId}|${next}`) || [];
+      const lines = (mtrEdgeLines.get(`${current.nodeId}|${next}`) || [])
+        .filter((lineCode) => allowAirportExpress || lineCode !== 'AEL');
       for (const lineCode of lines) {
         const nextTransfers = current.transfers + (current.lineCode && current.lineCode !== lineCode ? 1 : 0);
         const nextStops = current.stops + 1;
@@ -250,7 +255,7 @@ export function expandEdgeStations(edge: GraphEdge): string[] {
   if (edge.from === edge.to) return [edge.from];
 
   if ((edge.mode === 'MTR' || edge.mode === 'AEL') && !edge.from.startsWith('lrt:') && !edge.to.startsWith('lrt:') && !edge.from.startsWith('bus:') && !edge.to.startsWith('bus:')) {
-    return expandMtrEdge(edge.from, edge.to);
+    return expandMtrEdge(edge.from, edge.to, edge.mode === 'AEL');
   }
 
   if (edge.mode === 'LRT' && edge.from.startsWith('lrt:') && edge.to.startsWith('lrt:')) {
@@ -274,8 +279,24 @@ export function expandEdgeStations(edge: GraphEdge): string[] {
   return [edge.from, edge.to];
 }
 
-const AEL_STATIONS = new Set(['39', '40', '42', '47', '56']);
+const AEL_CITY_STATIONS = new Set(['39', '40', '42']);
 const AEL_EXPO_AIRPORT = new Set(['47', '56']);
+
+export function isAirportExpressFareEdge(from: string, to: string): boolean {
+  return (
+    (AEL_EXPO_AIRPORT.has(from) && (AEL_CITY_STATIONS.has(to) || AEL_EXPO_AIRPORT.has(to))) ||
+    (AEL_EXPO_AIRPORT.has(to) && (AEL_CITY_STATIONS.has(from) || AEL_EXPO_AIRPORT.has(from)))
+  );
+}
+
+function isAelMtrConnection(from: string, to: string): boolean {
+  return (
+    from !== to &&
+    (AEL_CITY_STATIONS.has(from) || AEL_CITY_STATIONS.has(to)) &&
+    !AEL_EXPO_AIRPORT.has(from) &&
+    !AEL_EXPO_AIRPORT.has(to)
+  );
+}
 
 function addEdge(graph: Map<string, GraphEdge[]>, edge: GraphEdge) {
   if (!graph.has(edge.from)) graph.set(edge.from, []);
@@ -316,10 +337,8 @@ export function buildGraph(ticketType: TicketType, isAELTrip: boolean, mtrFareMa
 
       if (ticketType === 'octopus') {
         if (isAELTrip) {
-          const isFromAEL = AEL_STATIONS.has(from);
-          const isToAEL = AEL_STATIONS.has(to);
-          const isAELLink = isFromAEL && isToAEL && rawFare > 0;
-          if (!isAELLink) {
+          const isAELLink = isAirportExpressFareEdge(from, to) && rawFare > 0;
+          if (!isAELLink && isAelMtrConnection(from, to)) {
             fare = 0;
           }
         } else if (AEL_EXPO_AIRPORT.has(from) || AEL_EXPO_AIRPORT.has(to)) {
@@ -328,7 +347,7 @@ export function buildGraph(ticketType: TicketType, isAELTrip: boolean, mtrFareMa
       }
 
       if (!Number.isFinite(fare)) continue;
-      const isAelEdge = AEL_STATIONS.has(from) && AEL_STATIONS.has(to);
+      const isAelEdge = isAirportExpressFareEdge(from, to);
       addEdge(graph, { from, to, fare, mode: isAelEdge ? 'AEL' : 'MTR', lineCode: isAelEdge ? 'AEL' : 'MTR' });
     }
   }

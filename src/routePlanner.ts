@@ -4,7 +4,7 @@ import {
   getNodeLabel,
 } from './data/unifiedNetwork';
 import { dijkstra } from './utils/algorithms';
-import { buildGraph, expandEdgeStations, getMtrLineCodeBetween } from './utils/graphBuilder';
+import { buildGraph, expandEdgeStations, getMtrLineCodeBetween, isAirportExpressFareEdge } from './utils/graphBuilder';
 
 function buildDetailedSegments(route: string[], edges: GraphEdge[]): DetailedSegment[] {
   if (route.length === 0) return [];
@@ -104,6 +104,24 @@ export function findMultimodalRoute(
   mode: 'optimized' | 'boring',
 ): RouteResult {
   const isAELTrip = ['47', '56'].includes(originId) || ['47', '56'].includes(destinationId);
+  const directFare = fareMatrix[originId]?.[destinationId];
+  if (mode === 'boring' && Number.isFinite(directFare)) {
+    const isAelEdge = isAirportExpressFareEdge(originId, destinationId);
+    const edge: GraphEdge = {
+      from: originId,
+      to: destinationId,
+      fare: directFare,
+      mode: isAelEdge ? 'AEL' : 'MTR',
+      lineCode: isAelEdge ? 'AEL' : 'MTR',
+    };
+
+    return {
+      totalFare: directFare,
+      route: [originId, destinationId],
+      segments: buildDetailedSegments([originId, destinationId], [edge]),
+    };
+  }
+
   const graph = buildGraph(ticketType, isAELTrip, fareMatrix);
   const result = dijkstra(graph, originId, destinationId, mode === 'boring');
 
