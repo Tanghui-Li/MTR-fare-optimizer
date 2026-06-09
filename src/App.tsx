@@ -33,7 +33,7 @@ function App() {
   const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
   
-  const { sheetHeight, setSheetHeight, handlers: dragHandlers } = useMobileSheetDrag(400)
+  const { sheetRef, setSheetHeight, handlers: dragHandlers } = useMobileSheetDrag(400)
   
   // Map Layer Controls State
   const [showBuses, setShowBuses] = useState(true);
@@ -154,8 +154,8 @@ function App() {
       <div className="unified-layout">
         {/* Left Panel: Controls + Results */}
         <div 
+          ref={sheetRef}
           className="left-panel"
-          style={sheetHeight ? { height: `${sheetHeight}px` } : undefined}
         >
           <button
             type="button"

@@ -77,11 +77,19 @@ function RouteFitter({ routeSegments }: { routeSegments?: DetailedSegment[] }) {
 function ResizeHandler() {
   const map = useMap();
   useEffect(() => {
+    let frame: number | null = null;
     const observer = new ResizeObserver(() => {
-      map.invalidateSize();
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        map.invalidateSize({ debounceMoveend: true });
+      });
     });
     observer.observe(map.getContainer());
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, [map]);
   return null;
 }
