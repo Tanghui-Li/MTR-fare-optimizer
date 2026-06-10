@@ -8,7 +8,7 @@ import { getLocalizedText } from '../data/zhHansText'
 
 interface SearchableDropdownProps {
   label: string
-  options: { id: string; zh: string; en: string }[]
+  options: { id: string; zh: string; zhHans?: string; en: string }[]
   value: string | null
   onChange: (id: string) => void
   placeholder: string
@@ -41,7 +41,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
     o.zh.includes(search) ||
     o.en.toLowerCase().includes(search.toLowerCase())
   )
-  const stationText = (station?: { zh: string; en: string }) => {
+  const stationText = (station?: { zh: string; zhHans?: string; en: string }) => {
     if (!station) return ''
     return getLocalizedText(station, locale)
   }
@@ -187,6 +187,7 @@ const ControlPanel = ({
     const result = getSelectableStations(lineCode).map((option) => ({
       id: option.id,
       zh: option.zh,
+      zhHans: option.zhHans,
       en: option.en,
     }))
 

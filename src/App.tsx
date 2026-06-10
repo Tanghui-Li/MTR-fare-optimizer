@@ -24,6 +24,10 @@ function getRouteSheetHeight() {
   return Math.max(minHeight, Math.min(preferredHeight, maxHeight));
 }
 
+function isMobileViewport() {
+  return typeof window !== 'undefined' && window.matchMedia(MOBILE_SHEET_QUERY).matches;
+}
+
 function App() {
   const [searchParams, setSearchParams] = useState({
     originId: null as string | null,
@@ -33,11 +37,11 @@ function App() {
   const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
   
-  const { sheetRef, setSheetHeight, handlers: dragHandlers } = useMobileSheetDrag(400)
+  const { sheetRef, setSheetHeight, isExpanded: isSheetExpanded, handlers: dragHandlers } = useMobileSheetDrag(400)
   
   // Map Layer Controls State
-  const [showBuses, setShowBuses] = useState(true);
-  const [showBusStops, setShowBusStops] = useState(true);
+  const [showBuses, setShowBuses] = useState(() => !isMobileViewport());
+  const [showBusStops, setShowBusStops] = useState(() => !isMobileViewport());
   const [showLRT, setShowLRT] = useState(true);
   const [mobileLayerControlsOpen, setMobileLayerControlsOpen] = useState(false);
   const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
@@ -160,6 +164,9 @@ function App() {
           <button
             type="button"
             className="mobile-sheet-toggle"
+            aria-label={isSheetExpanded ? t(locale, 'collapsePanel') : t(locale, 'expandPanel')}
+            aria-expanded={isSheetExpanded}
+            title={isSheetExpanded ? t(locale, 'collapsePanel') : t(locale, 'expandPanel')}
             {...dragHandlers}
           >
             <span className="mobile-sheet-grip" />

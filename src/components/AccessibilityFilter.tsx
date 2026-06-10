@@ -99,7 +99,10 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
   return (
     <div className={`acc-filter-panel ${expanded ? 'expanded' : ''}`}>
       <button
+        type="button"
         className="acc-filter-toggle"
+        aria-label={t(locale, 'accessibilityFilter')}
+        aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
       >
         <span className="acc-filter-toggle-icon">

@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 
 const MIN_SHEET_HEIGHT = 100;
 const NAV_HEIGHT = 76;
+const SNAP_TOLERANCE = 36;
+const CLICK_DRAG_THRESHOLD = 6;
 const MIN_INERTIA_VELOCITY = 0.08;
 const MAX_INERTIA_VELOCITY = 1.2;
 const STOP_INERTIA_VELOCITY = 0.02;
@@ -19,6 +21,8 @@ export function useMobileSheetDrag(defaultHeight = 400) {
   const velocitySamples = useRef<{ y: number; time: number }[]>([]);
   const heightVelocity = useRef(0);
   const inertiaFrame = useRef<number | null>(null);
+  const hasDragged = useRef(false);
+  const suppressNextClick = useRef(false);
 
   const applySheetHeight = useCallback((height: number | null) => {
     currentHeight.current = height;
@@ -43,6 +47,23 @@ export function useMobileSheetDrag(defaultHeight = 400) {
 
   const clampHeight = (height: number) => {
     return Math.max(MIN_SHEET_HEIGHT, Math.min(height, getMaxHeight()));
+  };
+
+  const getSnapPoints = () => {
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const maxHeight = getMaxHeight();
+    const compactHeight = clampHeight(Math.round(viewportHeight * 0.36));
+    const comfortableHeight = clampHeight(Math.max(defaultHeight, Math.round(viewportHeight * 0.56)));
+
+    return Array.from(new Set([compactHeight, comfortableHeight, maxHeight]))
+      .sort((a, b) => a - b);
+  };
+
+  const snapHeight = (height: number) => {
+    const snapPoints = getSnapPoints();
+    return snapPoints.reduce((nearest, point) => (
+      Math.abs(point - height) < Math.abs(nearest - height) ? point : nearest
+    ), snapPoints[0]);
   };
 
   const cancelInertia = () => {
@@ -89,7 +110,7 @@ export function useMobileSheetDrag(defaultHeight = 400) {
       Math.abs(initialVelocity) < MIN_INERTIA_VELOCITY ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     ) {
-      commitSheetHeight(currentHeight.current ?? dragStartHeight.current);
+      commitSheetHeight(snapHeight(currentHeight.current ?? dragStartHeight.current));
       return;
     }
 
@@ -99,7 +120,7 @@ export function useMobileSheetDrag(defaultHeight = 400) {
 
     const finishInertia = () => {
       inertiaFrame.current = null;
-      commitSheetHeight(projectedHeight);
+      commitSheetHeight(snapHeight(projectedHeight));
     };
 
     const step = (frameTime: number) => {
@@ -137,6 +158,8 @@ export function useMobileSheetDrag(defaultHeight = 400) {
 
     cancelInertia();
     dragStartY.current = event.clientY;
+    hasDragged.current = false;
+    suppressNextClick.current = false;
     velocitySamples.current = [{ y: event.clientY, time: event.timeStamp || performance.now() }];
     heightVelocity.current = 0;
     
@@ -156,6 +179,9 @@ export function useMobileSheetDrag(defaultHeight = 400) {
     const samples = getPointerSamples(event);
     const latestSample = samples[samples.length - 1] ?? event.nativeEvent;
     const deltaY = latestSample.clientY - dragStartY.current;
+    if (Math.abs(deltaY) > CLICK_DRAG_THRESHOLD) {
+      hasDragged.current = true;
+    }
     
     // deltaY positive means dragging down (decreasing height)
     // deltaY negative means dragging up (increasing height)
@@ -166,9 +192,14 @@ export function useMobileSheetDrag(defaultHeight = 400) {
 
   const finishPointerInteraction = (event: PointerEvent<HTMLButtonElement>, shouldStartInertia: boolean) => {
     const releaseVelocity = heightVelocity.current;
+    const didDrag = hasDragged.current;
     dragStartY.current = null;
     velocitySamples.current = [];
     heightVelocity.current = 0;
+    hasDragged.current = false;
+    if (didDrag) {
+      suppressNextClick.current = true;
+    }
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -176,7 +207,25 @@ export function useMobileSheetDrag(defaultHeight = 400) {
 
     if (shouldStartInertia) {
       startInertia(releaseVelocity);
+    } else {
+      commitSheetHeight(snapHeight(currentHeight.current ?? dragStartHeight.current));
     }
+  };
+
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false;
+      event.preventDefault();
+      return;
+    }
+
+    cancelInertia();
+    const current = currentHeight.current ?? sheetRef.current?.getBoundingClientRect().height ?? defaultHeight;
+    const maxHeight = getMaxHeight();
+    const snapPoints = getSnapPoints();
+    const comfortableHeight = snapPoints[Math.min(1, snapPoints.length - 1)] ?? defaultHeight;
+    const targetHeight = current >= maxHeight - SNAP_TOLERANCE ? comfortableHeight : maxHeight;
+    commitSheetHeight(targetHeight);
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
@@ -191,7 +240,9 @@ export function useMobileSheetDrag(defaultHeight = 400) {
     sheetHeight,
     sheetRef,
     setSheetHeight,
+    isExpanded: sheetHeight !== null && sheetHeight >= getMaxHeight() - SNAP_TOLERANCE,
     handlers: {
+      onClick: handleClick,
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,
