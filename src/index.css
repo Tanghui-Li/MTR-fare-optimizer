@@ -1972,6 +1972,10 @@
     min-height: 0;
   }
 
+  .map-access-panel {
+    display: none;
+  }
+
   .global-map-attribution {
     z-index: 300;
     font-size: 9px;
