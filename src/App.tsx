@@ -66,6 +66,20 @@ function MobileRouteSummary({ routeResult, stations, originId, destinationId, di
   )
 }
 
+function SameStationNotice({ stationId, stations, locale }: { stationId: string; stations: StationMap; locale: Locale }) {
+  const station = stations[stationId]
+  if (!station) return null
+
+  return (
+    <section className="same-station-notice" role="status" aria-live="polite">
+      <h2>{t(locale, 'sameStationTitle')}</h2>
+      <p>
+        {getLocalizedText(station, locale)} · {t(locale, 'sameStationBody')}
+      </p>
+    </section>
+  )
+}
+
 function App() {
   const [searchParams, setSearchParams] = useState({
     originId: null as string | null,
@@ -100,9 +114,25 @@ function App() {
   const activeSegments = useMemo(() => {
     return routeMode === 'optimized' ? optimizedSegments : boringSegments;
   }, [routeMode, optimizedSegments, boringSegments]);
+  const sameStationId = searchParams.originId && searchParams.destinationId && searchParams.originId === searchParams.destinationId
+    ? searchParams.originId
+    : null;
 
   useEffect(() => {
     if (searchParams.originId && searchParams.destinationId) {
+      if (searchParams.originId === searchParams.destinationId) {
+        setRouteResult(null)
+        setDisplayedRouteInfo({
+          originId: searchParams.originId,
+          destinationId: searchParams.destinationId,
+          ticketType: searchParams.ticketType,
+          directFare: 0,
+        })
+        setOptimizedSegments([])
+        setBoringSegments([])
+        return
+      }
+
       const matrixToUse = getFareMatrix(searchParams.ticketType);
       const optimizedResult = findMultimodalRoute(matrixToUse, searchParams.originId, searchParams.destinationId, searchParams.ticketType, 'optimized')
       const boringResult = findMultimodalRoute(matrixToUse, searchParams.originId, searchParams.destinationId, searchParams.ticketType, 'boring')
@@ -227,6 +257,14 @@ function App() {
               onTicketTypeChange={(type) => setSearchParams(prev => ({ ...prev, ticketType: type }))}
               locale={locale}
             />
+
+            {sameStationId && (
+              <SameStationNotice
+                stationId={sameStationId}
+                stations={stations}
+                locale={locale}
+              />
+            )}
 
             {routeResult && displayedRouteInfo.originId && displayedRouteInfo.destinationId && (
               <MobileRouteSummary

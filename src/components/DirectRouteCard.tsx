@@ -109,6 +109,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                       <h4>
                         {displayName(fromStation)}
                         <span className="route-stop-type">({getStationTypeLabel(seg.from)})</span>
+                        <span className="route-stop-role-label">{t(locale, 'startingPoint')}</span>
                       </h4>
                       <div className="route-stop-action enter">
                         <LogIn className="w-3 h-3" />
@@ -131,6 +132,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                         <h4>
                           {displayName(fromStation)}
                           <span className="route-stop-type">({getStationTypeLabel(seg.from)})</span>
+                          <span className="route-stop-role-label">{t(locale, 'exitReenter')}</span>
                         </h4>
                         <div className="route-stop-action enter">
                           <LogIn className="w-3 h-3" />
@@ -212,6 +214,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                     <h4>
                       {displayName(toStation)}
                       <span className="route-stop-type">({getStationTypeLabel(seg.to)})</span>
+                      <span className="route-stop-role-label">{isLastSeg ? t(locale, 'finalDestination') : t(locale, 'exitReenter')}</span>
                     </h4>
                     <div className="route-stop-fare">
                       <span className="route-stop-fare-label">{isLastSeg ? t(locale, 'finalExit') : t(locale, 'exitGate')}</span>

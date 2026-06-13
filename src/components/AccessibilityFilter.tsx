@@ -28,6 +28,7 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
   const contentId = useId();
   const simplePanelId = useId();
   const advancedPanelId = useId();
+  const modeName = useId();
 
   // Group items by category
   const grouped = useMemo(() => {
@@ -124,33 +125,40 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
       {expanded && (
         <div id={contentId} className="acc-filter-content">
           {/* Mode toggle */}
-          <div className="acc-filter-mode-row" role="radiogroup" aria-label={t(locale, 'accessibilityFilter')}>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={!isAdvanced}
-              aria-controls={simplePanelId}
+          <fieldset className="acc-filter-mode-row">
+            <legend className="sr-only">{t(locale, 'accessibilityFilter')}</legend>
+            <label
               className={`acc-filter-mode-btn ${!isAdvanced ? 'active' : ''}`}
-              onClick={() => { setIsAdvanced(false); setPendingClause(new Set()); }}
             >
+              <input
+                type="radio"
+                name={modeName}
+                checked={!isAdvanced}
+                aria-controls={simplePanelId}
+                onChange={() => { setIsAdvanced(false); setPendingClause(new Set()); }}
+                className="segmented-radio-input"
+              />
               {t(locale, 'simpleFilter')}
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={isAdvanced}
-              aria-controls={advancedPanelId}
+            </label>
+            <label
               className={`acc-filter-mode-btn ${isAdvanced ? 'active' : ''}`}
-              onClick={() => setIsAdvanced(true)}
             >
+              <input
+                type="radio"
+                name={modeName}
+                checked={isAdvanced}
+                aria-controls={advancedPanelId}
+                onChange={() => setIsAdvanced(true)}
+                className="segmented-radio-input"
+              />
               {t(locale, 'advancedFilterReadable')}
-            </button>
+            </label>
             {hasFilter && (
               <button type="button" className="acc-filter-clear-btn" onClick={clearAll}>
                 {t(locale, 'clearAll')}
               </button>
             )}
-          </div>
+          </fieldset>
 
           {!isAdvanced && (
             /* Simple mode: checkboxes, each = AND clause */

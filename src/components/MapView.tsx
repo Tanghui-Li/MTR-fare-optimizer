@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useEffect, useRef } from 'react';
+import { lazy, Suspense, useMemo, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -10,6 +10,8 @@ import stationsData from '../data/stations.json';
 import { StationMap, DetailedSegment, Locale } from '../types';
 import StationPopup from './StationPopup';
 import accessibilityRaw from '../data/accessibilityData.json';
+import lrtStationsData from '../data/lrtStations.json';
+import { busStopLocations } from '../data/unifiedNetwork';
 import { getRouteNodeCoordinate } from '../routePlanner';
 import { useMapPolylines } from '../hooks/useMapPolylines';
 import { t } from '../i18n';
@@ -22,6 +24,7 @@ const accessibilityData = accessibilityRaw as {
 
 const stations = stationsData as StationMap;
 const lines = linesData as Record<string, { name: { zh: string; en: string }; stations: string[] }>;
+const lrtStations = lrtStationsData as Record<string, { id: string; lat: number; lng: number; zh: string; en: string }>;
 const BusLayer = lazy(() => import('./BusLayer'));
 const BusStopLayer = lazy(() => import('./BusStopLayer'));
 const LRTStationLayer = lazy(() => import('./LRTStationLayer'));
@@ -39,6 +42,174 @@ interface MapViewProps {
   setShowLRT: (v: boolean) => void;
   mobileLayerControlsOpen: boolean;
   accessibilityFilter: string[][];
+}
+
+interface StationMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  primaryLine: string;
+  allLines: string[];
+}
+
+function getStationRoleLabel(role: string | null, locale: Locale) {
+  if (role === 'originDestination') return t(locale, 'sameStationTitle');
+  if (role === 'origin') return t(locale, 'startingPoint');
+  if (role === 'destination') return t(locale, 'finalDestination');
+  if (role === 'exitReenter') return t(locale, 'exitReenter');
+  return '';
+}
+
+function MapAccessPanel({
+  stationMarkers,
+  routeKeyStationIds,
+  exitReenterStations,
+  originId,
+  destinationId,
+  locale,
+  showBusStops,
+  showLRT,
+}: {
+  stationMarkers: StationMarker[];
+  routeKeyStationIds: string[];
+  exitReenterStations: string[];
+  originId?: string | null;
+  destinationId?: string | null;
+  locale: Locale;
+  showBusStops: boolean;
+  showLRT: boolean;
+}) {
+  const map = useMap();
+  const [selectedItem, setSelectedItem] = useState<{ title: string; detail: string } | null>(null);
+  const stationMarkerById = useMemo(() => new Map(stationMarkers.map((marker) => [marker.id, marker])), [stationMarkers]);
+  const lrtStops = useMemo(() => Object.values(lrtStations), []);
+
+  const getStationRole = (stationId: string) => {
+    if (stationId === originId && stationId === destinationId) return 'originDestination';
+    if (stationId === originId) return 'origin';
+    if (stationId === destinationId) return 'destination';
+    if (exitReenterStations.includes(stationId)) return 'exitReenter';
+    return null;
+  };
+
+  const openDetails = (lat: number, lng: number, title: string, detail: string) => {
+    map.setView([lat, lng], Math.max(map.getZoom(), 15), { animate: true });
+    setSelectedItem({ title, detail });
+  };
+
+  const renderStationButton = (stationId: string, compact = false) => {
+    const marker = stationMarkerById.get(stationId);
+    const station = stations[stationId];
+    if (!marker || !station) return null;
+
+    const name = getLocalizedText(station, locale);
+    const secondaryName = getSecondaryLocalizedText(station, locale);
+    const roleLabel = getStationRoleLabel(getStationRole(stationId), locale);
+    const lineText = marker.allLines.map((line) => getLocalizedLineName(line, locale)).join(', ');
+    const detail = [roleLabel, lineText, secondaryName].filter(Boolean).join(' · ');
+
+    return (
+      <button
+        key={stationId}
+        type="button"
+        className="map-access-item"
+        aria-label={`${t(locale, 'openMapItem')}: ${name}${detail ? `, ${detail}` : ''}`}
+        onClick={() => openDetails(marker.lat, marker.lng, name, detail || t(locale, 'mtrStation'))}
+      >
+        <span className={`map-access-shape ${roleLabel ? 'important' : ''}`} aria-hidden="true">
+          {roleLabel ? '◆' : '●'}
+        </span>
+        <span className="map-access-item-text">
+          <span className="map-access-item-name">{name}</span>
+          {!compact && <span className="map-access-item-meta">{detail || t(locale, 'mtrStation')}</span>}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <details className="map-access-panel">
+      <summary>{t(locale, 'accessibleMapItems')}</summary>
+      {selectedItem && (
+        <div className="map-access-selected" role="status" aria-live="polite">
+          <strong>{t(locale, 'mapItemSelected')}: {selectedItem.title}</strong>
+          <span>{selectedItem.detail}</span>
+        </div>
+      )}
+
+      {routeKeyStationIds.length > 0 && (
+        <section className="map-access-section" aria-label={t(locale, 'routeKeyStops')}>
+          <h3>{t(locale, 'routeKeyStops')}</h3>
+          <div className="map-access-list route-key-list">
+            {routeKeyStationIds.map((stationId) => renderStationButton(stationId, true))}
+          </div>
+        </section>
+      )}
+
+      <section className="map-access-section" aria-label={t(locale, 'mtrStation')}>
+        <h3>{t(locale, 'mtrStation')}</h3>
+        <div className="map-access-list">
+          {stationMarkers.map((marker) => renderStationButton(marker.id))}
+        </div>
+      </section>
+
+      {showBusStops && (
+        <section className="map-access-section" aria-label={t(locale, 'mapBusStops')}>
+          <h3>{t(locale, 'mapBusStops')}</h3>
+          <div className="map-access-list">
+            {busStopLocations.map((stop) => {
+              const name = getLocalizedText(stop, locale);
+              const routeText = stop.routes.join(', ');
+              const detail = `${t(locale, 'mapBusStops')} · ${routeText}`;
+              return (
+                <button
+                  key={`${stop.id}-${stop.lat}-${stop.lng}`}
+                  type="button"
+                  className="map-access-item"
+                  aria-label={`${t(locale, 'openMapItem')}: ${name}, ${detail}`}
+                  onClick={() => openDetails(stop.lat, stop.lng, name, detail)}
+                >
+                  <span className="map-access-shape square" aria-hidden="true">■</span>
+                  <span className="map-access-item-text">
+                    <span className="map-access-item-name">{name}</span>
+                    <span className="map-access-item-meta">{routeText}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {showLRT && (
+        <section className="map-access-section" aria-label={t(locale, 'mapLightRail')}>
+          <h3>{t(locale, 'mapLightRail')}</h3>
+          <div className="map-access-list">
+            {lrtStops.map((stop) => {
+              const name = getLocalizedText(stop, locale);
+              const secondaryName = getSecondaryLocalizedText(stop, locale);
+              const detail = [t(locale, 'lrtStation'), secondaryName].filter(Boolean).join(' · ');
+              return (
+                <button
+                  key={`access-lrt-${stop.id}`}
+                  type="button"
+                  className="map-access-item"
+                  aria-label={`${t(locale, 'openMapItem')}: ${name}, ${detail}`}
+                  onClick={() => openDetails(stop.lat, stop.lng, name, detail)}
+                >
+                  <span className="map-access-shape diamond" aria-hidden="true">◆</span>
+                  <span className="map-access-item-text">
+                    <span className="map-access-item-name">{name}</span>
+                    <span className="map-access-item-meta">{detail}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </details>
+  );
 }
 
 /** Sub-component that handles fitBounds when route changes */
@@ -153,11 +324,21 @@ export default function MapView({
 
   // Determine if a station is origin/destination/exitReenter for special rendering
   const getStationRole = (stationId: string) => {
+    if (stationId === originId && stationId === destinationId) return 'originDestination';
     if (stationId === originId) return 'origin';
     if (stationId === destinationId) return 'destination';
     if (exitReenterStations.includes(stationId)) return 'exitReenter';
     return null;
   };
+
+  const routeKeyStationIds = useMemo(() => {
+    const ids = [
+      originId,
+      ...exitReenterStations,
+      destinationId,
+    ].filter((id): id is string => Boolean(id));
+    return Array.from(new Set(ids));
+  }, [originId, destinationId, exitReenterStations]);
 
   return (
     <div className="map-container">
@@ -300,7 +481,13 @@ export default function MapView({
           let fillOpacity = isInterchange ? 1 : 0.9;
           let weight = isInterchange ? 2.5 : 2;
 
-          if (role === 'origin') {
+          if (role === 'originDestination') {
+            radius = 11;
+            color = '#0f172a';
+            fillColor = '#facc15';
+            fillOpacity = 1;
+            weight = 3;
+          } else if (role === 'origin') {
             radius = 10;
             color = '#16a34a';
             fillColor = '#22c55e';
@@ -354,6 +541,7 @@ export default function MapView({
                   <span style={{ opacity: 0.7, fontSize: '11px' }}>
                     {stations[marker.id] ? getSecondaryLocalizedText(stations[marker.id], locale) : ''}
                   </span>
+                  {role === 'originDestination' && <><br /><span style={{ color: '#0f172a', fontWeight: 700, fontSize: '11px' }}>◆ {t(locale, 'sameStationTitle')}</span></>}
                   {role === 'origin' && <><br /><span style={{ color: '#16a34a', fontWeight: 600, fontSize: '11px' }}>🟢 {locale === 'en' ? 'Origin' : locale === 'zh-Hans' ? '起点' : '起點'}</span></>}
                   {role === 'destination' && <><br /><span style={{ color: '#dc2626', fontWeight: 600, fontSize: '11px' }}>🔴 {locale === 'en' ? 'Destination' : locale === 'zh-Hans' ? '终点' : '終點'}</span></>}
                   {role === 'exitReenter' && <><br /><span style={{ color: '#ea580c', fontWeight: 600, fontSize: '11px' }}>🟠 {locale === 'en' ? 'Exit & Re-enter' : locale === 'zh-Hans' ? '出闸再入闸' : '出閘再入閘'}</span></>}
@@ -370,7 +558,7 @@ export default function MapView({
           );
         })}
 
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="map-layer-loading" role="status">{t(locale, 'loading')}</div>}>
           {/* MTR Bus Layer (live vehicles) */}
           {showBuses && <BusLayer locale={locale} />}
 
@@ -380,6 +568,17 @@ export default function MapView({
           {/* LRT Station Markers (Static + Live Popup) */}
           {showLRT && <LRTStationLayer locale={locale} />}
         </Suspense>
+
+        <MapAccessPanel
+          stationMarkers={stationMarkers}
+          routeKeyStationIds={routeKeyStationIds}
+          exitReenterStations={exitReenterStations}
+          originId={originId}
+          destinationId={destinationId}
+          locale={locale}
+          showBusStops={showBusStops}
+          showLRT={showLRT}
+        />
       </MapContainer>
 
     </div>

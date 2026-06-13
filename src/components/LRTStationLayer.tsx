@@ -21,7 +21,7 @@ export default function LRTStationLayer({ locale }: LRTStationLayerProps) {
           center={[stop.lat, stop.lng]}
           radius={4}
           pathOptions={{
-            color: '#94a3b8',
+            color: '#64748b',
             fillColor: '#ffffff',
             fillOpacity: 1,
             weight: 2,

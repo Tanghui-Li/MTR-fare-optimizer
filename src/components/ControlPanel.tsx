@@ -96,7 +96,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
 
   return (
     <div className="space-y-1 relative" ref={containerRef}>
-      <label id={labelId} htmlFor={triggerId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{label}</label>
+      <label id={labelId} htmlFor={triggerId} className="text-[10px] uppercase tracking-widest text-gray-600 font-black ml-1">{label}</label>
       <button
         id={triggerId}
         ref={triggerRef}
@@ -119,17 +119,17 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
           isOpen ? `${styles.border} ring-2 ${styles.ring}` : 'border-gray-100 hover:border-gray-200'
         }`}
       >
-        <span className={`text-sm font-medium ${!selectedStation ? 'text-gray-400' : 'text-gray-900'}`}>
+        <span className={`text-sm font-medium ${!selectedStation ? 'text-gray-600' : 'text-gray-900'}`}>
           {selectedStation ? stationText(selectedStation) : placeholder}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
         <div className="station-dropdown-menu absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-900 overflow-hidden animate-in fade-in zoom-in duration-200">
           <div className="station-dropdown-header p-2 border-b border-gray-100">
             <div className="station-dropdown-search relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
               <input 
                 autoFocus
                 type="text"
@@ -197,7 +197,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                 </button>
               ))
             ) : (
-              <div role="option" aria-disabled="true" className="p-4 text-center text-sm text-gray-400">{noStationText}</div>
+              <div role="option" aria-disabled="true" className="p-4 text-center text-sm text-gray-600">{noStationText}</div>
             )}
           </div>
         </div>
@@ -229,6 +229,7 @@ const ControlPanel = ({
   const [destLine, setDestLine] = useState<string>('ALL')
   const originLineId = useId()
   const destLineId = useId()
+  const ticketTypeName = useId()
 
   const lineOptions = [{ code: 'ALL', zh: '所有路線', zhHans: '所有线路', en: 'All Routes', category: 'MTR' as const }, ...getLineFilterOptions()]
   const getFilteredStations = (lineCode: string) => {
@@ -265,36 +266,45 @@ const ControlPanel = ({
     <div className="control-panel-card bg-white p-6 rounded-2xl shadow-xl border border-gray-100 space-y-6">
       {/* Ticket Type Toggle */}
       <div className="flex justify-center">
-        <div className="ticket-type-toggle bg-gray-100 p-1 rounded-xl flex gap-1 w-full max-w-sm" role="radiogroup" aria-label={t(locale, 'ticketType')}>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={ticketType === 'octopus'}
-            onClick={() => onTicketTypeChange('octopus')}
+        <fieldset className="ticket-type-toggle bg-gray-100 p-1 rounded-xl flex gap-1 w-full max-w-sm">
+          <legend className="sr-only">{t(locale, 'ticketType')}</legend>
+          <label
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-bold text-sm transition-all ${
               ticketType === 'octopus' 
                 ? 'bg-white text-gray-900 shadow-sm' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
+            <input
+              type="radio"
+              name={ticketTypeName}
+              value="octopus"
+              checked={ticketType === 'octopus'}
+              onChange={() => onTicketTypeChange('octopus')}
+              className="segmented-radio-input"
+            />
             <CreditCard className="w-4 h-4" />
             {t(locale, 'ticketOctopus')}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={ticketType === 'single'}
-            onClick={() => onTicketTypeChange('single')}
+          </label>
+          <label
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-bold text-sm transition-all ${
               ticketType === 'single' 
                 ? 'bg-white text-gray-900 shadow-sm' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
+            <input
+              type="radio"
+              name={ticketTypeName}
+              value="single"
+              checked={ticketType === 'single'}
+              onChange={() => onTicketTypeChange('single')}
+              className="segmented-radio-input"
+            />
             <Ticket className="w-4 h-4" />
             {t(locale, 'ticketSingle')}
-          </button>
-        </div>
+          </label>
+        </fieldset>
       </div>
 
       <div className="route-form-grid grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative">
@@ -307,7 +317,7 @@ const ControlPanel = ({
           
           <div className="route-form-fields space-y-3">
             <div className="space-y-1">
-              <label htmlFor={originLineId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'startingPoint')} {t(locale, 'selectLine')}</label>
+              <label htmlFor={originLineId} className="text-[10px] uppercase tracking-widest text-gray-600 font-black ml-1">{t(locale, 'startingPoint')} {t(locale, 'selectLine')}</label>
               <select 
                 id={originLineId}
                 className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"
@@ -344,7 +354,7 @@ const ControlPanel = ({
             title={t(locale, 'swapStations')}
             aria-label={t(locale, 'swapStations')}
           >
-            <ArrowRightLeft className="w-4 h-4 text-gray-400" />
+            <ArrowRightLeft className="w-4 h-4 text-gray-600" />
           </button>
         </div>
 
@@ -357,7 +367,7 @@ const ControlPanel = ({
 
           <div className="route-form-fields space-y-3">
             <div className="space-y-1">
-              <label htmlFor={destLineId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'finalDestination')} {t(locale, 'selectLine')}</label>
+              <label htmlFor={destLineId} className="text-[10px] uppercase tracking-widest text-gray-600 font-black ml-1">{t(locale, 'finalDestination')} {t(locale, 'selectLine')}</label>
               <select 
                 id={destLineId}
                 className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"

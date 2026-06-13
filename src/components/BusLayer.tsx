@@ -40,11 +40,17 @@ interface BusLayerProps {
 
 export default function BusLayer({ locale }: BusLayerProps) {
   const [vehicles, setVehicles] = useState<BusVehicle[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState<BusVehicle | null>(null);
   const map = useMap();
 
   const fetchAllBuses = useCallback(async () => {
+    setLoading(true);
     const vehicleMap = new Map<string, BusVehicle>();
     const bounds = map.getBounds();
+    const failedRoutes: string[] = [];
 
     const fetchPromises = mtrBusRoutes.map(async (route) => {
       try {
@@ -95,12 +101,33 @@ export default function BusLayer({ locale }: BusLayerProps) {
           }
         }
       } catch (e) {
+        failedRoutes.push(route);
         console.warn(`Failed to fetch bus route ${route}:`, e);
       }
     });
 
     await Promise.all(fetchPromises);
-    setVehicles(Array.from(vehicleMap.values()));
+    const nextVehicles = Array.from(vehicleMap.values());
+
+    if (failedRoutes.length === mtrBusRoutes.length) {
+      setError(locale === 'en'
+        ? 'Unable to update live buses. Existing positions are kept.'
+        : locale === 'zh-Hans'
+          ? '无法更新实时巴士，已保留现有车辆位置。'
+          : '無法更新實時巴士，已保留現有車輛位置。');
+    } else {
+      setVehicles(nextVehicles);
+      setLastUpdated(new Date().toLocaleTimeString(locale === 'en' ? 'en-GB' : 'zh-HK'));
+      setError(failedRoutes.length > 0
+        ? locale === 'en'
+          ? `${failedRoutes.length} bus routes failed to update.`
+          : locale === 'zh-Hans'
+            ? `${failedRoutes.length} 条巴士线路更新失败。`
+            : `${failedRoutes.length} 條巴士路線更新失敗。`
+        : null);
+    }
+
+    setLoading(false);
   }, [map, locale]);
 
   useEffect(() => {
@@ -108,6 +135,18 @@ export default function BusLayer({ locale }: BusLayerProps) {
     const interval = setInterval(fetchAllBuses, 30000);
     return () => clearInterval(interval);
   }, [fetchAllBuses]);
+
+  const openVehicleDetails = (vehicle: BusVehicle) => {
+    map.setView([vehicle.lat, vehicle.lng], Math.max(map.getZoom(), 15), { animate: true });
+    setSelectedVehicle(vehicle);
+  };
+
+  const getVehicleLabel = (vehicle: BusVehicle) => {
+    const delayText = vehicle.isDelayed
+      ? locale === 'en' ? 'delayed' : locale === 'zh-Hans' ? '延误' : '延誤'
+      : locale === 'en' ? 'on time' : locale === 'zh-Hans' ? '正常' : '正常';
+    return `${t(locale, 'vehicle')} ${vehicle.busId}, ${vehicle.route}, ${t(locale, 'nextStop')} ${vehicle.nextStopName}, ${vehicle.timeText}, ${delayText}`;
+  };
 
   return (
     <>
@@ -156,6 +195,50 @@ export default function BusLayer({ locale }: BusLayerProps) {
           </Popup>
         </CircleMarker>
       ))}
+      <div className="map-bus-status-panel" role="status" aria-live="polite">
+        <div className="map-bus-status-main">
+          <strong>{t(locale, 'liveBusStatus')}</strong>
+          <span>
+            {loading
+              ? t(locale, 'loading')
+              : error || `${vehicles.length} ${t(locale, 'vehicle')}${lastUpdated ? ` · ${t(locale, 'updated')}: ${lastUpdated}` : ''}`}
+          </span>
+        </div>
+        <button type="button" onClick={fetchAllBuses} disabled={loading}>
+          {t(locale, 'retry')}
+        </button>
+      </div>
+
+      <details className="map-access-panel map-access-panel-live">
+        <summary>{t(locale, 'liveBusAccessibleList')}</summary>
+        {selectedVehicle && (
+          <div className="map-access-selected" role="status" aria-live="polite">
+            <strong>{t(locale, 'mapItemSelected')}: {selectedVehicle.route} #{selectedVehicle.busId}</strong>
+            <span>{getVehicleLabel(selectedVehicle)}</span>
+          </div>
+        )}
+        <div className="map-access-list">
+          {vehicles.length > 0 ? vehicles.map((vehicle) => (
+            <button
+              key={`access-${vehicle.busId}-${vehicle.route}`}
+              type="button"
+              className="map-access-item"
+              aria-label={`${t(locale, 'openMapItem')}: ${getVehicleLabel(vehicle)}`}
+              onClick={() => openVehicleDetails(vehicle)}
+            >
+              <span className={`map-access-shape ${vehicle.isDelayed ? 'important' : 'square'}`} aria-hidden="true">
+                {vehicle.isDelayed ? '!' : '■'}
+              </span>
+              <span className="map-access-item-text">
+                <span className="map-access-item-name">{vehicle.route} #{vehicle.busId}</span>
+                <span className="map-access-item-meta">{t(locale, 'nextStop')} {vehicle.nextStopName} · {vehicle.timeText}</span>
+              </span>
+            </button>
+          )) : (
+            <div className="map-access-empty">{loading ? t(locale, 'loading') : t(locale, 'noData')}</div>
+          )}
+        </div>
+      </details>
     </>
   );
 }
