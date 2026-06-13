@@ -991,9 +991,55 @@
   font-size: 12px;
 }
 
+.map-access-selected-detail {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.map-access-selected-detail .popup-content,
+.map-access-selected-detail .lrt-popup-content,
+.map-access-selected-detail .bus-popup-content {
+  width: 100%;
+}
+
+.map-access-selected-detail .popup-scroll-area {
+  max-height: 280px;
+}
+
 .map-access-selected span {
   color: #475569;
   font-weight: 600;
+}
+
+.map-access-live-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.map-access-live-state button {
+  flex-shrink: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.map-access-live-state button:focus-visible {
+  outline: 2px solid #0f172a;
+  outline-offset: 2px;
 }
 
 .map-access-section {
@@ -1409,7 +1455,7 @@
 
 .bus-route-badge {
   background: #f59e0b;
-  color: #fff;
+  color: #0f172a;
   padding: 1px 6px;
   border-radius: 3px;
   font-size: 11px;

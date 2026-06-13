@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { StationMap, StationMetadata, DetailedSegment, PathStep, Locale } from '../types'
-import { lineColors, getLocalizedLineName } from '../data/lineColors'
+import { lineColors, getLocalizedLineName, getLineTextColor } from '../data/lineColors'
 import { ArrowRight, MapPin, LogIn, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatCurrency, t } from '../i18n'
 import { getLocalizedText } from '../data/zhHansText'
@@ -157,7 +157,10 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                         <span
                           key={gi}
                           className="route-segment-line-tag"
-                          style={{ backgroundColor: lineColors[g.lineCode] || '#666' }}
+                          style={{
+                            backgroundColor: lineColors[g.lineCode] || '#666',
+                            color: getLineTextColor(lineColors[g.lineCode] || '#666'),
+                          }}
                         >
                             {getLocalizedLineName(g.lineCode, locale)}
                         </span>

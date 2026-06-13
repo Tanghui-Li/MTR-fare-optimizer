@@ -148,6 +148,19 @@ export default function BusLayer({ locale }: BusLayerProps) {
     return `${t(locale, 'vehicle')} ${vehicle.busId}, ${vehicle.route}, ${t(locale, 'nextStop')} ${vehicle.nextStopName}, ${vehicle.timeText}, ${delayText}`;
   };
 
+  const getVehicleHeading = (vehicle: BusVehicle) => {
+    if (vehicle.remark && vehicle.remark.trim()) {
+      return vehicle.remark.includes('往') ? vehicle.remark : `${t(locale, 'busTo')} ${vehicle.remark}`;
+    }
+    return t(locale, 'busHeading');
+  };
+
+  const getVehicleTime = (vehicle: BusVehicle) => {
+    return vehicle.timeText.includes('即將開出') || vehicle.timeText.includes('即将开出') || vehicle.timeText.includes('已離開') || vehicle.timeText.includes('已离开') || vehicle.timeText.includes('行駛中') || vehicle.timeText.includes('行驶中') || vehicle.timeText.includes('到達') || vehicle.timeText.includes('到达')
+      ? vehicle.timeText
+      : `${t(locale, 'estimated')} ${vehicle.timeText}`;
+  };
+
   return (
     <>
       {vehicles.map((v) => (
@@ -173,9 +186,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
                 <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
                   <div className="bus-eta-main">
                     <span className="bus-dest">
-                      {v.remark && v.remark.trim() 
-                        ? (v.remark.includes('往') ? v.remark : `${t(locale, 'busTo')} ${v.remark}`)
-                        : t(locale, 'busHeading')}
+                      {getVehicleHeading(v)}
                     </span>
                   </div>
                   <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
@@ -184,9 +195,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
                   </div>
                   <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
                     <span className={`bus-eta-time ${v.isDelayed ? 'delayed' : ''}`}>
-                      {v.timeText.includes('即將開出') || v.timeText.includes('即将开出') || v.timeText.includes('已離開') || v.timeText.includes('已离开') || v.timeText.includes('行駛中') || v.timeText.includes('行驶中') || v.timeText.includes('到達') || v.timeText.includes('到达')
-                        ? v.timeText
-                        : `${t(locale, 'estimated')} ${v.timeText}`}
+                      {getVehicleTime(v)}
                     </span>
                   </div>
                 </div>
@@ -212,9 +221,39 @@ export default function BusLayer({ locale }: BusLayerProps) {
       <details className="map-access-panel map-access-panel-live">
         <summary>{t(locale, 'liveBusAccessibleList')}</summary>
         {selectedVehicle && (
-          <div className="map-access-selected" role="status" aria-live="polite">
-            <strong>{t(locale, 'mapItemSelected')}: {selectedVehicle.route} #{selectedVehicle.busId}</strong>
-            <span>{getVehicleLabel(selectedVehicle)}</span>
+          <div className="map-access-selected map-access-selected-detail" role="region" aria-live="polite" aria-label={t(locale, 'mapItemSelected')}>
+            <div className="bus-popup-content">
+              <div className="bus-popup-header">
+                <span className="bus-route-badge">{selectedVehicle.route}</span>
+                <span className="bus-id-tag">{t(locale, 'vehicle')} #{selectedVehicle.busId}</span>
+              </div>
+              <div className="bus-eta-list">
+                <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
+                  <div className="bus-eta-main">
+                    <span className="bus-dest">{getVehicleHeading(selectedVehicle)}</span>
+                  </div>
+                  <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
+                    <span className="bus-next-stop-label">{t(locale, 'nextStop')}</span>
+                    <span className="bus-stop-name-highlight">{selectedVehicle.nextStopName}</span>
+                  </div>
+                  <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
+                    <span className={`bus-eta-time ${selectedVehicle.isDelayed ? 'delayed' : ''}`}>
+                      {getVehicleTime(selectedVehicle)}
+                    </span>
+                  </div>
+                  <div className="map-access-live-state">
+                    <span>
+                      {loading
+                        ? t(locale, 'loading')
+                        : error || `${t(locale, 'updated')}: ${lastUpdated || '-'}`}
+                    </span>
+                    <button type="button" onClick={fetchAllBuses} disabled={loading}>
+                      {t(locale, 'retry')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
         <div className="map-access-list">

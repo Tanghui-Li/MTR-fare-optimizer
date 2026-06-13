@@ -182,6 +182,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                 <button
                   type="button"
                   role="option"
+                  tabIndex={-1}
                   aria-selected={value === s.id}
                   aria-posinset={index + 1}
                   aria-setsize={filteredOptions.length}

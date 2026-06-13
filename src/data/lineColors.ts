@@ -39,6 +39,21 @@ export function getLocalizedLineName(lineCode: string, locale: 'zh-Hant' | 'en' 
   return line.zh;
 }
 
+export function getLineTextColor(backgroundColor: string): string {
+  const hex = backgroundColor.replace('#', '');
+  const normalized = hex.length === 3
+    ? hex.split('').map((char) => `${char}${char}`).join('')
+    : hex;
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+
+  if ([red, green, blue].some(Number.isNaN)) return '#ffffff';
+
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  return luminance > 0.55 ? '#0f172a' : '#ffffff';
+}
+
 /**
  * MTR 巴士路线列表 (用于获取实时数据)
  */

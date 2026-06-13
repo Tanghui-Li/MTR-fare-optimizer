@@ -123,8 +123,8 @@ function App() {
       if (searchParams.originId === searchParams.destinationId) {
         setRouteResult(null)
         setDisplayedRouteInfo({
-          originId: searchParams.originId,
-          destinationId: searchParams.destinationId,
+          originId: null,
+          destinationId: null,
           ticketType: searchParams.ticketType,
           directFare: 0,
         })
@@ -149,6 +149,12 @@ function App() {
 
     } else {
       setRouteResult(null)
+      setDisplayedRouteInfo({
+        originId: null,
+        destinationId: null,
+        ticketType: searchParams.ticketType,
+        directFare: 0,
+      })
       setOptimizedSegments([])
       setBoringSegments([])
     }
