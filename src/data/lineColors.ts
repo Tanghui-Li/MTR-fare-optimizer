@@ -39,19 +39,64 @@ export function getLocalizedLineName(lineCode: string, locale: 'zh-Hant' | 'en' 
   return line.zh;
 }
 
-export function getLineTextColor(backgroundColor: string): string {
-  const hex = backgroundColor.replace('#', '');
+const LIGHT_LINE_TEXT_COLOR = '#ffffff';
+const DARK_LINE_TEXT_COLOR = '#0f172a';
+const MINIMUM_TEXT_CONTRAST_RATIO = 4.5;
+
+type RgbColor = [number, number, number];
+
+function parseHexColor(color: string): RgbColor | null {
+  const hex = color.trim().replace(/^#/, '');
   const normalized = hex.length === 3
     ? hex.split('').map((char) => `${char}${char}`).join('')
     : hex;
-  const red = Number.parseInt(normalized.slice(0, 2), 16);
-  const green = Number.parseInt(normalized.slice(2, 4), 16);
-  const blue = Number.parseInt(normalized.slice(4, 6), 16);
 
-  if ([red, green, blue].some(Number.isNaN)) return '#ffffff';
+  if (!/^[\da-f]{6}$/i.test(normalized)) return null;
 
-  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
-  return luminance > 0.55 ? '#0f172a' : '#ffffff';
+  return [
+    Number.parseInt(normalized.slice(0, 2), 16),
+    Number.parseInt(normalized.slice(2, 4), 16),
+    Number.parseInt(normalized.slice(4, 6), 16),
+  ];
+}
+
+function toLinearSrgbChannel(value: number): number {
+  const channel = value / 255;
+  return channel <= 0.04045
+    ? channel / 12.92
+    : ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function getRelativeLuminance([red, green, blue]: RgbColor): number {
+  return (
+    0.2126 * toLinearSrgbChannel(red)
+    + 0.7152 * toLinearSrgbChannel(green)
+    + 0.0722 * toLinearSrgbChannel(blue)
+  );
+}
+
+function getContrastRatio(luminanceA: number, luminanceB: number): number {
+  const lighter = Math.max(luminanceA, luminanceB);
+  const darker = Math.min(luminanceA, luminanceB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function getLineTextColor(backgroundColor: string): string {
+  const background = parseHexColor(backgroundColor);
+  if (!background) return LIGHT_LINE_TEXT_COLOR;
+
+  const backgroundLuminance = getRelativeLuminance(background);
+  const lightContrast = getContrastRatio(backgroundLuminance, getRelativeLuminance([255, 255, 255]));
+  const darkContrast = getContrastRatio(backgroundLuminance, getRelativeLuminance([15, 23, 42]));
+
+  if (lightContrast >= MINIMUM_TEXT_CONTRAST_RATIO && darkContrast >= MINIMUM_TEXT_CONTRAST_RATIO) {
+    return darkContrast >= lightContrast ? DARK_LINE_TEXT_COLOR : LIGHT_LINE_TEXT_COLOR;
+  }
+
+  if (darkContrast >= MINIMUM_TEXT_CONTRAST_RATIO) return DARK_LINE_TEXT_COLOR;
+  if (lightContrast >= MINIMUM_TEXT_CONTRAST_RATIO) return LIGHT_LINE_TEXT_COLOR;
+
+  return darkContrast >= lightContrast ? DARK_LINE_TEXT_COLOR : LIGHT_LINE_TEXT_COLOR;
 }
 
 /**
