@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useId } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import { CircleMarker, useMap, Popup } from 'react-leaflet';
 import { fetchMtrBusSchedule } from '../services/mtrApi';
 import { mtrBusRoutes } from '../data/lineColors';
@@ -36,19 +36,13 @@ interface BusVehicle {
 
 interface BusLayerProps {
   locale: Locale;
-  mobileListOpen: boolean;
-  onMobileListOpenChange: (open: boolean) => void;
 }
 
-export default function BusLayer({ locale, mobileListOpen, onMobileListOpenChange }: BusLayerProps) {
+export default function BusLayer({ locale }: BusLayerProps) {
   const [vehicles, setVehicles] = useState<BusVehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState('');
-  const [selectedVehicle, setSelectedVehicle] = useState<BusVehicle | null>(null);
-  const mobileToggleRef = useRef<HTMLButtonElement>(null);
-  const mobilePanelId = useId();
-  const mobileTitleId = useId();
   const map = useMap();
 
   const fetchAllBuses = useCallback(async () => {
@@ -141,23 +135,9 @@ export default function BusLayer({ locale, mobileListOpen, onMobileListOpenChang
     return () => clearInterval(interval);
   }, [fetchAllBuses]);
 
-  const openVehicleDetails = (vehicle: BusVehicle) => {
-    map.setView([vehicle.lat, vehicle.lng], Math.max(map.getZoom(), 15), { animate: true });
-    setSelectedVehicle(vehicle);
-  };
-
-  const closeMobileList = () => {
-    onMobileListOpenChange(false);
-    requestAnimationFrame(() => mobileToggleRef.current?.focus());
-  };
-
   const getVehicleDelayLabel = (vehicle: BusVehicle) => (
     vehicle.isDelayed ? t(locale, 'busDelayed') : t(locale, 'busNormal')
   );
-
-  const getVehicleLabel = (vehicle: BusVehicle) => {
-    return `${t(locale, 'vehicle')} ${vehicle.busId}, ${vehicle.route}, ${t(locale, 'nextStop')} ${vehicle.nextStopName}, ${vehicle.timeText}, ${getVehicleDelayLabel(vehicle)}`;
-  };
 
   const getVehicleHeading = (vehicle: BusVehicle) => {
     if (vehicle.remark && vehicle.remark.trim()) {
@@ -178,115 +158,63 @@ export default function BusLayer({ locale, mobileListOpen, onMobileListOpenChang
     </span>
   );
 
-  const renderSelectedVehicleDetails = () => selectedVehicle && (
-    <div className="map-access-selected map-access-selected-detail" role="region" aria-live="polite" aria-label={t(locale, 'mapItemSelected')}>
-      <div className="bus-popup-content">
-        <div className="bus-popup-header">
-          <span className="bus-route-badge">{selectedVehicle.route}</span>
-          <span className="bus-id-tag">{t(locale, 'vehicle')} #{selectedVehicle.busId}</span>
-          {renderDelayBadge(selectedVehicle)}
-        </div>
-        <div className="bus-eta-list">
-          <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
-            <div className="bus-eta-main">
-              <span className="bus-dest">{getVehicleHeading(selectedVehicle)}</span>
-            </div>
-            <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
-              <span className="bus-next-stop-label">{t(locale, 'nextStop')}</span>
-              <span className="bus-stop-name-highlight">{selectedVehicle.nextStopName}</span>
-            </div>
-            <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
-              <span className={`bus-eta-time ${selectedVehicle.isDelayed ? 'delayed' : ''}`}>
-                {getVehicleTime(selectedVehicle)}
-              </span>
-              {renderDelayBadge(selectedVehicle)}
-            </div>
-            <div className="map-access-live-state">
-              <span>
-                {loading
-                  ? t(locale, 'loading')
-                  : error || `${t(locale, 'updated')}: ${lastUpdated || '-'}`}
-              </span>
-              <button type="button" onClick={fetchAllBuses} disabled={loading}>
-                {t(locale, 'retry')}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderVehicleAccessList = () => (
-    <div className="map-access-list">
-      {vehicles.length > 0 ? vehicles.map((vehicle) => (
-        <button
-          key={`access-${vehicle.busId}-${vehicle.route}`}
-          type="button"
-          className="map-access-item"
-          aria-label={`${t(locale, 'openMapItem')}: ${getVehicleLabel(vehicle)}`}
-          onClick={() => openVehicleDetails(vehicle)}
-        >
-          <span className={`map-access-shape ${vehicle.isDelayed ? 'important' : 'square'}`} aria-hidden="true">
-            {vehicle.isDelayed ? '!' : '■'}
-          </span>
-          <span className="map-access-item-text">
-            <span className="map-access-item-name">{vehicle.route} #{vehicle.busId}</span>
-            <span className="map-access-item-meta">
-              {t(locale, 'nextStop')} {vehicle.nextStopName} · {vehicle.timeText} · {getVehicleDelayLabel(vehicle)}
-            </span>
-          </span>
-        </button>
-      )) : (
-        <div className="map-access-empty">{loading ? t(locale, 'loading') : t(locale, 'noData')}</div>
-      )}
-    </div>
-  );
-
   return (
     <>
       {vehicles.map((v) => (
-        <CircleMarker
-          key={`${v.busId}-${v.route}`}
-          center={[v.lat, v.lng]}
-          radius={5}
-          pathOptions={{
-            color: '#fff',
-            fillColor: v.isDelayed ? '#ef4444' : '#f59e0b',
-            fillOpacity: 0.9,
-            weight: 1.5,
-          }}
-        >
-          <Popup className="bus-popup" minWidth={280} maxWidth={280}>
-            <div className="bus-popup-content">
-              <div className="bus-popup-header">
-                <span className="bus-route-badge">{v.route}</span>
-                <span className="bus-id-tag">{locale === 'en' ? 'Vehicle' : locale === 'zh-Hans' ? '车辆编号' : '車輛編號'} #{v.busId}</span>
-                {renderDelayBadge(v)}
-              </div>
-              
-              <div className="bus-eta-list">
-                <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
-                  <div className="bus-eta-main">
-                    <span className="bus-dest">
-                      {getVehicleHeading(v)}
-                    </span>
-                  </div>
-                  <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
-                    <span className="bus-next-stop-label">{t(locale, 'nextStop')}</span>
-                    <span className="bus-stop-name-highlight">{v.nextStopName}</span>
-                  </div>
-                  <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
-                    <span className={`bus-eta-time ${v.isDelayed ? 'delayed' : ''}`}>
-                      {getVehicleTime(v)}
-                    </span>
-                    {renderDelayBadge(v)}
+        <Fragment key={`${v.busId}-${v.route}`}>
+          <CircleMarker
+            center={[v.lat, v.lng]}
+            radius={5}
+            interactive={false}
+            pathOptions={{
+              color: '#fff',
+              fillColor: v.isDelayed ? '#ef4444' : '#f59e0b',
+              fillOpacity: 0.9,
+              weight: 1.5,
+            }}
+          />
+          <CircleMarker
+            center={[v.lat, v.lng]}
+            radius={12}
+            pathOptions={{
+              color: v.isDelayed ? '#ef4444' : '#f59e0b',
+              opacity: 0,
+              fillColor: v.isDelayed ? '#ef4444' : '#f59e0b',
+              fillOpacity: 0.01,
+              weight: 0,
+            }}
+          >
+            <Popup className="bus-popup" minWidth={280} maxWidth={280}>
+              <div className="bus-popup-content">
+                <div className="bus-popup-header">
+                  <span className="bus-route-badge">{v.route}</span>
+                  <span className="bus-id-tag">{locale === 'en' ? 'Vehicle' : locale === 'zh-Hans' ? '车辆编号' : '車輛編號'} #{v.busId}</span>
+                  {renderDelayBadge(v)}
+                </div>
+
+                <div className="bus-eta-list">
+                  <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
+                    <div className="bus-eta-main">
+                      <span className="bus-dest">
+                        {getVehicleHeading(v)}
+                      </span>
+                    </div>
+                    <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
+                      <span className="bus-next-stop-label">{t(locale, 'nextStop')}</span>
+                      <span className="bus-stop-name-highlight">{v.nextStopName}</span>
+                    </div>
+                    <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
+                      <span className={`bus-eta-time ${v.isDelayed ? 'delayed' : ''}`}>
+                        {getVehicleTime(v)}
+                      </span>
+                      {renderDelayBadge(v)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Popup>
-        </CircleMarker>
+            </Popup>
+          </CircleMarker>
+        </Fragment>
       ))}
       <div className="map-bus-status-panel" role="status" aria-live="polite">
         <div className="map-bus-status-main">
@@ -302,49 +230,6 @@ export default function BusLayer({ locale, mobileListOpen, onMobileListOpenChang
         </button>
       </div>
 
-      <details className="map-access-panel map-access-panel-live">
-        <summary>{t(locale, 'liveBusAccessibleList')}</summary>
-        {renderSelectedVehicleDetails()}
-        {renderVehicleAccessList()}
-      </details>
-
-      <div className={`mobile-map-access-panel mobile-live-bus-panel ${mobileListOpen ? 'open' : ''}`}>
-        <button
-          ref={mobileToggleRef}
-          type="button"
-          className="mobile-map-access-toggle"
-          aria-expanded={mobileListOpen}
-          aria-controls={mobilePanelId}
-          onClick={() => onMobileListOpenChange(!mobileListOpen)}
-        >
-          {t(locale, 'liveBusAccessibleList')}
-        </button>
-        {mobileListOpen && (
-          <div
-            id={mobilePanelId}
-            className="mobile-map-access-drawer"
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby={mobileTitleId}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                event.stopPropagation();
-                closeMobileList();
-              }
-            }}
-          >
-            <div className="mobile-map-access-header">
-              <h2 id={mobileTitleId}>{t(locale, 'liveBusAccessibleList')}</h2>
-              <button type="button" onClick={closeMobileList}>
-                {t(locale, 'closePanel')}
-              </button>
-            </div>
-            {renderSelectedVehicleDetails()}
-            {renderVehicleAccessList()}
-          </div>
-        )}
-      </div>
     </>
   );
 }

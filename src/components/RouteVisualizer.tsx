@@ -32,6 +32,7 @@ const RouteVisualizer = ({
 }: RouteVisualizerProps) => {
   const savings = directFare - routeResult.totalFare
   const hasSavings = savings > 0.01 // Floating point safety
+  const gateChanges = Math.max(optimizedSegments.length - 1, 0)
   const routeModeName = useId()
 
   return (
@@ -62,7 +63,7 @@ const RouteVisualizer = ({
                   <p className="savings-sub">{t(locale, 'extremeEfficiency')}</p>
                 </div>
               </div>
-              <div className="savings-watermark">SAVED</div>
+              <div className="savings-watermark">{t(locale, 'routeComparisonSavings')}</div>
             </div>
           )}
 
@@ -80,7 +81,7 @@ const RouteVisualizer = ({
                 onChange={() => onRouteModeChange('optimized')}
                 className="segmented-radio-input"
               />
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
                 <polyline points="17 6 23 6 23 12" />
               </svg>
@@ -98,7 +99,7 @@ const RouteVisualizer = ({
                 onChange={() => onRouteModeChange('boring')}
                 className="segmented-radio-input"
               />
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />
               </svg>
@@ -108,6 +109,31 @@ const RouteVisualizer = ({
           </fieldset>
         </>
       )}
+
+      <section className="route-comparison-panel" aria-label={t(locale, 'routeComparisonTitle')} aria-live="polite">
+        <div className="route-comparison-header">
+          <h3>{t(locale, 'routeComparisonTitle')}</h3>
+          <p>{hasSavings ? t(locale, 'routeComparisonHint') : t(locale, 'routeComparisonNoExtraSavings')}</p>
+        </div>
+        <dl className="route-comparison-grid">
+          <div>
+            <dt>{t(locale, 'routeComparisonOptimized')}</dt>
+            <dd>{formatCurrency(routeResult.totalFare)}</dd>
+          </div>
+          <div>
+            <dt>{t(locale, 'routeComparisonRegular')}</dt>
+            <dd>{formatCurrency(directFare)}</dd>
+          </div>
+          <div>
+            <dt>{t(locale, 'routeComparisonSavings')}</dt>
+            <dd>{formatCurrency(Math.max(savings, 0))}</dd>
+          </div>
+          <div>
+            <dt>{t(locale, 'routeComparisonGateChanges')}</dt>
+            <dd>{gateChanges}</dd>
+          </div>
+        </dl>
+      </section>
 
       {/* Route Card */}
       {(!hasSavings || routeMode === 'optimized') ? (

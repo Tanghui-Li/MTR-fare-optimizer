@@ -208,21 +208,21 @@ export function StationDetails({ stationId, station, lines, locale, isActive }: 
       </div>
 
       <div className="popup-scroll-area">
-        <div className="popup-trains">
+        <div className="popup-trains" aria-busy={loading}>
           {loading && trainData.length === 0 && (
-            <div className="popup-loading">
-              <div className="popup-loading-spinner" />
+            <div className="popup-loading" role="status" aria-live="polite">
+              <div className="popup-loading-spinner" aria-hidden="true" />
               <span>{t(locale, 'loading')}</span>
             </div>
           )}
 
-          {error && <div className="popup-error">{error}</div>}
+          {error && <div className="popup-error" role="alert">{error}</div>}
 
           {trainData.map((dir, idx) => (
             <div key={`${dir.direction}-${idx}`} className="popup-direction">
               <div className="popup-direction-label">{dir.label}</div>
               {dir.trains.length === 0 ? (
-                <div className="popup-no-train">{locale === 'en' ? 'No service' : locale === 'zh-Hans' ? '暂无班次' : '暫無班次'}</div>
+                <div className="popup-no-train" role="status">{locale === 'en' ? 'No service' : locale === 'zh-Hans' ? '暂无班次' : '暫無班次'}</div>
               ) : (
                 <div className="popup-train-list">
                   {dir.trains.map((train, tidx) => (
@@ -248,7 +248,7 @@ export function StationDetails({ stationId, station, lines, locale, isActive }: 
           ))}
 
           {!loading && trainData.length === 0 && !error && (
-            <div className="popup-no-train">{locale === 'en' ? 'No train service' : locale === 'zh-Hans' ? '目前没有列车服务' : '目前沒有列車服務'}</div>
+            <div className="popup-no-train" role="status">{locale === 'en' ? 'No train service' : locale === 'zh-Hans' ? '目前没有列车服务' : '目前沒有列車服務'}</div>
           )}
         </div>
 
@@ -293,8 +293,14 @@ export function StationDetails({ stationId, station, lines, locale, isActive }: 
       {isActive && (
         <div className="popup-footer">
           <span className="popup-update-time">{lastUpdated ? `${t(locale, 'updated')}: ${lastUpdated}` : ''}</span>
-          <button type="button" className="popup-refresh-btn" onClick={loadTrainData} disabled={loading}>
-            {loading ? '⟳' : `↻ ${t(locale, 'refresh')}`}
+          <button
+            type="button"
+            className="popup-refresh-btn"
+            onClick={loadTrainData}
+            disabled={loading}
+            aria-label={loading ? t(locale, 'loading') : t(locale, 'refresh')}
+          >
+            <span aria-hidden="true">{loading ? '⟳' : `↻ ${t(locale, 'refresh')}`}</span>
           </button>
         </div>
       )}

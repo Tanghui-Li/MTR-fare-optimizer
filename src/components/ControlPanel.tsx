@@ -234,6 +234,11 @@ interface ControlPanelProps {
   onOriginChange: (id: string) => void
   onDestinationChange: (id: string) => void
   onTicketTypeChange: (type: TicketType) => void
+  onClearRoute: () => void
+  onPlanRoute: () => void
+  canPlanRoute: boolean
+  hasAppliedRoute: boolean
+  hasUnappliedChanges: boolean
   locale: Locale
 }
 
@@ -244,6 +249,11 @@ const ControlPanel = ({
   onOriginChange,
   onDestinationChange,
   onTicketTypeChange,
+  onClearRoute,
+  onPlanRoute,
+  canPlanRoute,
+  hasAppliedRoute,
+  hasUnappliedChanges,
   locale,
 }: ControlPanelProps) => {
   const [originLine, setOriginLine] = useState<string>('ALL')
@@ -269,6 +279,14 @@ const ControlPanel = ({
 
   const originStations = getFilteredStations(originLine)
   const destStations = getFilteredStations(destLine)
+  const hasRouteDraft = Boolean(originId || destinationId || originLine !== 'ALL' || destLine !== 'ALL')
+  const shouldShowPlanAction = !hasAppliedRoute || hasUnappliedChanges
+
+  const handleClearRoute = () => {
+    setOriginLine('ALL')
+    setDestLine('ALL')
+    onClearRoute()
+  }
 
   const handleSwap = () => {
     const tempLine = originLine
@@ -285,6 +303,21 @@ const ControlPanel = ({
 
   return (
     <div className="control-panel-card bg-white p-6 rounded-2xl shadow-xl border border-gray-100 space-y-6">
+      <div className="control-panel-header">
+        <h2 className="control-panel-title">{t(locale, 'routePanel')}</h2>
+        {hasRouteDraft && (
+          <button
+            type="button"
+            className="clear-route-button"
+            onClick={handleClearRoute}
+            aria-label={t(locale, 'clearRoute')}
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
+            {t(locale, 'clearRoute')}
+          </button>
+        )}
+      </div>
+
       {/* Ticket Type Toggle */}
       <div className="flex justify-center">
         <fieldset className="ticket-type-toggle bg-gray-100 p-1 rounded-xl flex gap-1 w-full max-w-sm">
@@ -416,6 +449,17 @@ const ControlPanel = ({
           </div>
         </div>
       </div>
+
+      {shouldShowPlanAction && (
+        <button
+          type="button"
+          className="plan-route-button"
+          onClick={onPlanRoute}
+          disabled={!canPlanRoute}
+        >
+          {hasAppliedRoute ? t(locale, 'updateRoute') : t(locale, 'planRoute')}
+        </button>
+      )}
     </div>
   )
 }

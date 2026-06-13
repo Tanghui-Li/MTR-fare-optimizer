@@ -1,4 +1,4 @@
-import { useState, useMemo, useId } from 'react';
+import { useState, useMemo, useId, useRef } from 'react';
 import accessibilityRaw from '../data/accessibilityData.json';
 import stationsData from '../data/stations.json';
 import { Locale, StationMap } from '../types';
@@ -28,7 +28,9 @@ interface AccessibilityFilterProps {
 export default function AccessibilityFilter({ filter, onFilterChange, locale }: AccessibilityFilterProps) {
   const [expanded, setExpanded] = useState(false);
   const [isAdvanced, setIsAdvanced] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const contentId = useId();
+  const scopeId = useId();
   const simplePanelId = useId();
   const advancedPanelId = useId();
   const modeName = useId();
@@ -102,6 +104,11 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
     setPendingClause(new Set());
   };
 
+  const closePanel = () => {
+    setExpanded(false);
+    requestAnimationFrame(() => toggleRef.current?.focus());
+  };
+
   const hasFilter = filter.length > 0;
   const localName = (value: { zh: string; en: string }) => getLocalizedText(value, locale);
   const matchedStations = useMemo(() => {
@@ -117,10 +124,10 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
     : matchedStations.length === 0
       ? t(locale, 'accessibilityFilterNoMatches')
       : locale === 'en'
-        ? `${matchedStations.length} stations match the accessibility filter`
+        ? `${matchedStations.length} stations match the accessibility conditions`
         : locale === 'zh-Hans'
-          ? `${matchedStations.length} 个车站符合无障碍筛选`
-          : `${matchedStations.length} 個車站符合無障礙篩選`;
+          ? `${matchedStations.length} 个车站符合无障碍条件`
+          : `${matchedStations.length} 個車站符合無障礙條件`;
 
   return (
     <div className={`acc-filter-panel ${expanded ? 'expanded' : ''}`}>
@@ -128,6 +135,7 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
         {filterStatusText}
       </div>
       <button
+        ref={toggleRef}
         type="button"
         className="acc-filter-toggle"
         aria-label={`${t(locale, 'accessibilityFilter')}: ${filterStatusText}`}
@@ -146,7 +154,18 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
       </button>
 
       {expanded && (
-        <div id={contentId} className="acc-filter-content">
+        <div
+          id={contentId}
+          className="acc-filter-content"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
+              closePanel();
+            }
+          }}
+        >
+          <p id={scopeId} className="acc-filter-scope">{t(locale, 'accessibilityFilterScope')}</p>
           <div className="acc-filter-result" role="status" aria-live="polite">
             <strong>{filterStatusText}</strong>
             {hasFilter && matchedStations.length > 0 && (

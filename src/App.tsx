@@ -14,6 +14,18 @@ import { getLocalizedText } from './data/zhHansText'
 
 const stations = unifiedStationMap as StationMap
 type RouteMode = 'optimized' | 'boring';
+interface RouteSearchParams {
+  originId: string | null
+  destinationId: string | null
+  ticketType: TicketType
+}
+
+const initialSearchParams: RouteSearchParams = {
+  originId: null,
+  destinationId: null,
+  ticketType: 'octopus',
+}
+
 const MOBILE_SHEET_QUERY = '(max-width: 900px), ((max-height: 600px) and (hover: none) and (pointer: coarse))';
 
 function getRouteSheetHeight() {
@@ -80,12 +92,46 @@ function SameStationNotice({ stationId, stations, locale }: { stationId: string;
   )
 }
 
+function PlanningStatus({
+  originId,
+  destinationId,
+  hasAppliedRoute,
+  hasUnappliedChanges,
+  isSameStation,
+  locale,
+}: {
+  originId: string | null
+  destinationId: string | null
+  hasAppliedRoute: boolean
+  hasUnappliedChanges: boolean
+  isSameStation: boolean
+  locale: Locale
+}) {
+  if (isSameStation) return null
+  if (originId && destinationId && hasAppliedRoute && !hasUnappliedChanges) return null
+
+  let message = t(locale, 'planningStatusSelectBoth')
+  if (hasUnappliedChanges) {
+    message = t(locale, 'planningStatusUnapplied')
+  } else if (originId && destinationId) {
+    message = t(locale, 'planningStatusReady')
+  } else if (!originId && destinationId) {
+    message = t(locale, 'planningStatusNeedOrigin')
+  } else if (originId && !destinationId) {
+    message = t(locale, 'planningStatusNeedDestination')
+  }
+
+  return (
+    <section className="planning-status" role="status" aria-live="polite">
+      <h2>{t(locale, 'planningStatusTitle')}</h2>
+      <p>{message}</p>
+    </section>
+  )
+}
+
 function App() {
-  const [searchParams, setSearchParams] = useState({
-    originId: null as string | null,
-    destinationId: null as string | null,
-    ticketType: 'octopus' as TicketType,
-  })
+  const [draftSearchParams, setDraftSearchParams] = useState<RouteSearchParams>(initialSearchParams)
+  const [submittedSearchParams, setSubmittedSearchParams] = useState<RouteSearchParams>(initialSearchParams)
   const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
   
@@ -114,18 +160,43 @@ function App() {
   const activeSegments = useMemo(() => {
     return routeMode === 'optimized' ? optimizedSegments : boringSegments;
   }, [routeMode, optimizedSegments, boringSegments]);
-  const sameStationId = searchParams.originId && searchParams.destinationId && searchParams.originId === searchParams.destinationId
-    ? searchParams.originId
+  const sameStationId = draftSearchParams.originId && draftSearchParams.destinationId && draftSearchParams.originId === draftSearchParams.destinationId
+    ? draftSearchParams.originId
     : null;
+  const hasCompleteDraft = Boolean(draftSearchParams.originId && draftSearchParams.destinationId);
+  const hasAppliedRoute = Boolean(routeResult && displayedRouteInfo.originId && displayedRouteInfo.destinationId);
+  const hasUnappliedChanges = hasAppliedRoute && (
+    draftSearchParams.originId !== submittedSearchParams.originId ||
+    draftSearchParams.destinationId !== submittedSearchParams.destinationId ||
+    draftSearchParams.ticketType !== submittedSearchParams.ticketType
+  );
+  const canPlanRoute = hasCompleteDraft && !sameStationId;
+
+  const handleSubmitRoute = () => {
+    if (!canPlanRoute) return
+    setSubmittedSearchParams(draftSearchParams)
+    setRouteMode('optimized')
+  }
+
+  const handleClearRoute = () => {
+    const clearedParams = {
+      ...draftSearchParams,
+      originId: null,
+      destinationId: null,
+    }
+    setDraftSearchParams(clearedParams)
+    setSubmittedSearchParams(clearedParams)
+    setRouteMode('optimized')
+  }
 
   useEffect(() => {
-    if (searchParams.originId && searchParams.destinationId) {
-      if (searchParams.originId === searchParams.destinationId) {
+    if (submittedSearchParams.originId && submittedSearchParams.destinationId) {
+      if (submittedSearchParams.originId === submittedSearchParams.destinationId) {
         setRouteResult(null)
         setDisplayedRouteInfo({
           originId: null,
           destinationId: null,
-          ticketType: searchParams.ticketType,
+          ticketType: submittedSearchParams.ticketType,
           directFare: 0,
         })
         setOptimizedSegments([])
@@ -133,15 +204,15 @@ function App() {
         return
       }
 
-      const matrixToUse = getFareMatrix(searchParams.ticketType);
-      const optimizedResult = findMultimodalRoute(matrixToUse, searchParams.originId, searchParams.destinationId, searchParams.ticketType, 'optimized')
-      const boringResult = findMultimodalRoute(matrixToUse, searchParams.originId, searchParams.destinationId, searchParams.ticketType, 'boring')
+      const matrixToUse = getFareMatrix(submittedSearchParams.ticketType);
+      const optimizedResult = findMultimodalRoute(matrixToUse, submittedSearchParams.originId, submittedSearchParams.destinationId, submittedSearchParams.ticketType, 'optimized')
+      const boringResult = findMultimodalRoute(matrixToUse, submittedSearchParams.originId, submittedSearchParams.destinationId, submittedSearchParams.ticketType, 'boring')
 
       setRouteResult(optimizedResult)
       setDisplayedRouteInfo({
-        originId: searchParams.originId,
-        destinationId: searchParams.destinationId,
-        ticketType: searchParams.ticketType,
+        originId: submittedSearchParams.originId,
+        destinationId: submittedSearchParams.destinationId,
+        ticketType: submittedSearchParams.ticketType,
         directFare: boringResult.totalFare,
       })
       setOptimizedSegments(optimizedResult.segments || [])
@@ -152,13 +223,13 @@ function App() {
       setDisplayedRouteInfo({
         originId: null,
         destinationId: null,
-        ticketType: searchParams.ticketType,
+        ticketType: submittedSearchParams.ticketType,
         directFare: 0,
       })
       setOptimizedSegments([])
       setBoringSegments([])
     }
-  }, [searchParams])
+  }, [submittedSearchParams])
 
   useEffect(() => {
     if (!routeResult) {
@@ -205,7 +276,7 @@ function App() {
                 aria-controls="map-layer-controls"
                 aria-label={t(locale, 'mapLayers')}
               >
-                <SlidersHorizontal className="w-4 h-4" />
+                <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
                 {t(locale, 'mapLayers')}
               </button>
               <AccessibilityFilter
@@ -214,7 +285,7 @@ function App() {
                 locale={locale}
               />
             </div>
-            <div className="lang-switcher" aria-label={t(locale, 'language')}>
+            <div className="lang-switcher" role="group" aria-label={t(locale, 'language')}>
               {localeOptions.map((option) => (
                 <button
                   key={option.value}
@@ -255,12 +326,26 @@ function App() {
             </header>
             
             <ControlPanel 
-              originId={searchParams.originId}
-              destinationId={searchParams.destinationId}
-              ticketType={searchParams.ticketType}
-              onOriginChange={(id) => setSearchParams(prev => ({ ...prev, originId: id }))}
-              onDestinationChange={(id) => setSearchParams(prev => ({ ...prev, destinationId: id }))}
-              onTicketTypeChange={(type) => setSearchParams(prev => ({ ...prev, ticketType: type }))}
+              originId={draftSearchParams.originId}
+              destinationId={draftSearchParams.destinationId}
+              ticketType={draftSearchParams.ticketType}
+              onOriginChange={(id) => setDraftSearchParams(prev => ({ ...prev, originId: id }))}
+              onDestinationChange={(id) => setDraftSearchParams(prev => ({ ...prev, destinationId: id }))}
+              onTicketTypeChange={(type) => setDraftSearchParams(prev => ({ ...prev, ticketType: type }))}
+              onClearRoute={handleClearRoute}
+              onPlanRoute={handleSubmitRoute}
+              canPlanRoute={canPlanRoute}
+              hasAppliedRoute={hasAppliedRoute}
+              hasUnappliedChanges={hasUnappliedChanges}
+              locale={locale}
+            />
+
+            <PlanningStatus
+              originId={draftSearchParams.originId}
+              destinationId={draftSearchParams.destinationId}
+              hasAppliedRoute={hasAppliedRoute}
+              hasUnappliedChanges={hasUnappliedChanges}
+              isSameStation={Boolean(sameStationId)}
               locale={locale}
             />
 

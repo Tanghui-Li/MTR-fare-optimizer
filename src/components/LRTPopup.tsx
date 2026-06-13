@@ -76,15 +76,16 @@ export function LRTDetails({ stationId, stationName, locale, isActive }: LRTDeta
         <span className="lrt-station-name">{stationName}</span>
       </div>
 
+      <div aria-busy={loading}>
       {loading && platforms.length === 0 ? (
-        <div className="popup-loading">
-          <div className="popup-loading-spinner"></div>
+        <div className="popup-loading" role="status" aria-live="polite">
+          <div className="popup-loading-spinner" aria-hidden="true"></div>
           <span>{t(locale, 'loading')}</span>
         </div>
       ) : error ? (
-        <div className="popup-error">{error}</div>
+        <div className="popup-error" role="alert">{error}</div>
       ) : platforms.length === 0 ? (
-        <div className="popup-no-data">{t(locale, 'noData')}</div>
+        <div className="popup-no-data" role="status">{t(locale, 'noData')}</div>
       ) : (
         <div className="lrt-platform-list">
           {platforms.map((plat) => (
@@ -105,12 +106,19 @@ export function LRTDetails({ stationId, stationName, locale, isActive }: LRTDeta
           ))}
         </div>
       )}
+      </div>
 
       {isActive && (
         <div className="popup-footer">
           <span className="popup-update-time">{lastUpdated ? `${t(locale, 'updated')}: ${lastUpdated}` : ''}</span>
-          <button type="button" className="popup-refresh-btn" onClick={load} disabled={loading}>
-            {loading ? '⟳' : `↻ ${t(locale, 'refresh')}`}
+          <button
+            type="button"
+            className="popup-refresh-btn"
+            onClick={load}
+            disabled={loading}
+            aria-label={loading ? t(locale, 'loading') : t(locale, 'refresh')}
+          >
+            <span aria-hidden="true">{loading ? '⟳' : `↻ ${t(locale, 'refresh')}`}</span>
           </button>
         </div>
       )}

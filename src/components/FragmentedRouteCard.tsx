@@ -113,6 +113,8 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, detailedSegmen
             const showTransferNote = Boolean(prevSeg && prevSeg.to !== seg.from);
             const transferFrom = prevSeg ? stations[prevSeg.to] : undefined;
             const detailId = `${detailIdPrefix}-segment-${segIdx}`;
+            const lineSummary = displayLineGroups.map((group) => getLocalizedLineName(group.lineCode, locale)).join(', ') || t(locale, 'transferNote');
+            const segmentSummaryLabel = `${isExpanded ? t(locale, 'collapseSegmentDetails') : t(locale, 'expandSegmentDetails')}: ${lineSummary}, ${totalStops} ${t(locale, 'routeCount')} · ${transferCount > 0 ? `${transferCount} ${t(locale, 'transferCount')}` : t(locale, 'direct')}`;
 
             return (
               <div key={segIdx} className="route-segment">
@@ -166,6 +168,7 @@ const FragmentedRouteCard = ({ routeResult, stations, ticketType, detailedSegmen
                     onClick={() => toggleSegment(segIdx)}
                     aria-expanded={isExpanded}
                     aria-controls={detailId}
+                    aria-label={segmentSummaryLabel}
                   >
                     <div className="route-segment-lines">
                       {displayLineGroups.map((g, gi) => (
