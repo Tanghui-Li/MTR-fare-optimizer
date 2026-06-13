@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useMemo, useEffect, useRef, useState, useId } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -75,6 +75,7 @@ function MapAccessPanel({
   locale,
   showBusStops,
   showLRT,
+  highlightedStationIds,
 }: {
   stationMarkers: StationMarker[];
   routeKeyStationIds: string[];
@@ -84,11 +85,22 @@ function MapAccessPanel({
   locale: Locale;
   showBusStops: boolean;
   showLRT: boolean;
+  highlightedStationIds: Set<string> | null;
 }) {
   const map = useMap();
   const [selectedItem, setSelectedItem] = useState<MapSelectedItem | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileToggleRef = useRef<HTMLButtonElement>(null);
+  const mobilePanelId = useId();
+  const mobileTitleId = useId();
   const stationMarkerById = useMemo(() => new Map(stationMarkers.map((marker) => [marker.id, marker])), [stationMarkers]);
   const lrtStops = useMemo(() => Object.values(lrtStations), []);
+  const matchedStationIds = useMemo(() => {
+    if (!highlightedStationIds) return [];
+    return stationMarkers
+      .filter((marker) => highlightedStationIds.has(marker.id))
+      .map((marker) => marker.id);
+  }, [highlightedStationIds, stationMarkers]);
 
   const getStationRole = (stationId: string) => {
     if (stationId === originId && stationId === destinationId) return 'originDestination';
@@ -101,6 +113,11 @@ function MapAccessPanel({
   const focusMapItem = (lat: number, lng: number, item: MapSelectedItem) => {
     map.setView([lat, lng], Math.max(map.getZoom(), 15), { animate: true });
     setSelectedItem(item);
+  };
+
+  const closeMobilePanel = () => {
+    setMobileOpen(false);
+    requestAnimationFrame(() => mobileToggleRef.current?.focus());
   };
 
   const renderSelectedDetails = () => {
@@ -149,46 +166,26 @@ function MapAccessPanel({
     );
   };
 
-  const renderStationButton = (stationId: string, compact = false) => {
-    const marker = stationMarkerById.get(stationId);
-    const station = stations[stationId];
-    if (!marker || !station) return null;
-
-    const name = getLocalizedText(station, locale);
-    const secondaryName = getSecondaryLocalizedText(station, locale);
-    const roleLabel = getStationRoleLabel(getStationRole(stationId), locale);
-    const lineText = marker.allLines.map((line) => getLocalizedLineName(line, locale)).join(', ');
-    const detail = [roleLabel, lineText, secondaryName].filter(Boolean).join(' · ');
-
-    return (
-      <button
-        key={stationId}
-        type="button"
-        className="map-access-item"
-        aria-label={`${t(locale, 'openMapItem')}: ${name}${detail ? `, ${detail}` : ''}`}
-        onClick={() => focusMapItem(marker.lat, marker.lng, { kind: 'mtr', stationId })}
-      >
-        <span className={`map-access-shape ${roleLabel ? 'important' : ''}`} aria-hidden="true">
-          {roleLabel ? '◆' : '●'}
-        </span>
-        <span className="map-access-item-text">
-          <span className="map-access-item-name">{name}</span>
-          {!compact && <span className="map-access-item-meta">{detail || t(locale, 'mtrStation')}</span>}
-        </span>
-      </button>
-    );
-  };
-
-  return (
-    <details className="map-access-panel">
-      <summary>{t(locale, 'accessibleMapItems')}</summary>
-      {renderSelectedDetails()}
-
+  const renderAccessSections = () => (
+    <>
       {routeKeyStationIds.length > 0 && (
         <section className="map-access-section" aria-label={t(locale, 'routeKeyStops')}>
           <h3>{t(locale, 'routeKeyStops')}</h3>
           <div className="map-access-list route-key-list">
             {routeKeyStationIds.map((stationId) => renderStationButton(stationId, true))}
+          </div>
+        </section>
+      )}
+
+      {highlightedStationIds && (
+        <section className="map-access-section" aria-label={t(locale, 'accessibilityMatchedStations')}>
+          <h3>{t(locale, 'accessibilityMatchedStations')}</h3>
+          <div className="map-access-list">
+            {matchedStationIds.length > 0 ? (
+              matchedStationIds.map((stationId) => renderStationButton(stationId))
+            ) : (
+              <div className="map-access-empty">{t(locale, 'accessibilityFilterNoMatches')}</div>
+            )}
           </div>
         </section>
       )}
@@ -255,7 +252,86 @@ function MapAccessPanel({
           </div>
         </section>
       )}
-    </details>
+    </>
+  );
+
+  const renderStationButton = (stationId: string, compact = false) => {
+    const marker = stationMarkerById.get(stationId);
+    const station = stations[stationId];
+    if (!marker || !station) return null;
+
+    const name = getLocalizedText(station, locale);
+    const secondaryName = getSecondaryLocalizedText(station, locale);
+    const roleLabel = getStationRoleLabel(getStationRole(stationId), locale);
+    const filterMatchLabel = highlightedStationIds?.has(stationId) ? t(locale, 'accessibilityFilterMatch') : '';
+    const lineText = marker.allLines.map((line) => getLocalizedLineName(line, locale)).join(', ');
+    const detail = [roleLabel, filterMatchLabel, lineText, secondaryName].filter(Boolean).join(' · ');
+
+    return (
+      <button
+        key={stationId}
+        type="button"
+        className="map-access-item"
+        aria-label={`${t(locale, 'openMapItem')}: ${name}${detail ? `, ${detail}` : ''}`}
+        onClick={() => focusMapItem(marker.lat, marker.lng, { kind: 'mtr', stationId })}
+      >
+        <span className={`map-access-shape ${roleLabel || filterMatchLabel ? 'important' : ''}`} aria-hidden="true">
+          {roleLabel || filterMatchLabel ? '◆' : '●'}
+        </span>
+        <span className="map-access-item-text">
+          <span className="map-access-item-name">{name}</span>
+          {!compact && <span className="map-access-item-meta">{detail || t(locale, 'mtrStation')}</span>}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <>
+      <details className="map-access-panel">
+        <summary>{t(locale, 'accessibleMapItems')}</summary>
+        {renderSelectedDetails()}
+        {renderAccessSections()}
+      </details>
+
+      <div className={`mobile-map-access-panel ${mobileOpen ? 'open' : ''}`}>
+        <button
+          ref={mobileToggleRef}
+          type="button"
+          className="mobile-map-access-toggle"
+          aria-expanded={mobileOpen}
+          aria-controls={mobilePanelId}
+          onClick={() => setMobileOpen((open) => !open)}
+        >
+          {t(locale, 'accessibleMapItems')}
+        </button>
+        {mobileOpen && (
+          <div
+            id={mobilePanelId}
+            className="mobile-map-access-drawer"
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby={mobileTitleId}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                closeMobilePanel();
+              }
+            }}
+          >
+            <div className="mobile-map-access-header">
+              <h2 id={mobileTitleId}>{t(locale, 'accessibleMapItems')}</h2>
+              <button type="button" onClick={closeMobilePanel}>
+                {t(locale, 'closePanel')}
+              </button>
+            </div>
+            {renderSelectedDetails()}
+            {renderAccessSections()}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -625,6 +701,7 @@ export default function MapView({
           locale={locale}
           showBusStops={showBusStops}
           showLRT={showLRT}
+          highlightedStationIds={highlightedStationIds}
         />
       </MapContainer>
 

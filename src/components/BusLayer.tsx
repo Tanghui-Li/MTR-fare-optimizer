@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useId } from 'react';
 import { CircleMarker, useMap, Popup } from 'react-leaflet';
 import { fetchMtrBusSchedule } from '../services/mtrApi';
 import { mtrBusRoutes } from '../data/lineColors';
@@ -44,6 +44,10 @@ export default function BusLayer({ locale }: BusLayerProps) {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<BusVehicle | null>(null);
+  const [mobileListOpen, setMobileListOpen] = useState(false);
+  const mobileToggleRef = useRef<HTMLButtonElement>(null);
+  const mobilePanelId = useId();
+  const mobileTitleId = useId();
   const map = useMap();
 
   const fetchAllBuses = useCallback(async () => {
@@ -141,11 +145,17 @@ export default function BusLayer({ locale }: BusLayerProps) {
     setSelectedVehicle(vehicle);
   };
 
+  const closeMobileList = () => {
+    setMobileListOpen(false);
+    requestAnimationFrame(() => mobileToggleRef.current?.focus());
+  };
+
+  const getVehicleDelayLabel = (vehicle: BusVehicle) => (
+    vehicle.isDelayed ? t(locale, 'busDelayed') : t(locale, 'busNormal')
+  );
+
   const getVehicleLabel = (vehicle: BusVehicle) => {
-    const delayText = vehicle.isDelayed
-      ? locale === 'en' ? 'delayed' : locale === 'zh-Hans' ? '延误' : '延誤'
-      : locale === 'en' ? 'on time' : locale === 'zh-Hans' ? '正常' : '正常';
-    return `${t(locale, 'vehicle')} ${vehicle.busId}, ${vehicle.route}, ${t(locale, 'nextStop')} ${vehicle.nextStopName}, ${vehicle.timeText}, ${delayText}`;
+    return `${t(locale, 'vehicle')} ${vehicle.busId}, ${vehicle.route}, ${t(locale, 'nextStop')} ${vehicle.nextStopName}, ${vehicle.timeText}, ${getVehicleDelayLabel(vehicle)}`;
   };
 
   const getVehicleHeading = (vehicle: BusVehicle) => {
@@ -160,6 +170,77 @@ export default function BusLayer({ locale }: BusLayerProps) {
       ? vehicle.timeText
       : `${t(locale, 'estimated')} ${vehicle.timeText}`;
   };
+
+  const renderDelayBadge = (vehicle: BusVehicle) => (
+    <span className={`bus-delay-badge ${vehicle.isDelayed ? 'delayed' : 'normal'}`}>
+      {getVehicleDelayLabel(vehicle)}
+    </span>
+  );
+
+  const renderSelectedVehicleDetails = () => selectedVehicle && (
+    <div className="map-access-selected map-access-selected-detail" role="region" aria-live="polite" aria-label={t(locale, 'mapItemSelected')}>
+      <div className="bus-popup-content">
+        <div className="bus-popup-header">
+          <span className="bus-route-badge">{selectedVehicle.route}</span>
+          <span className="bus-id-tag">{t(locale, 'vehicle')} #{selectedVehicle.busId}</span>
+          {renderDelayBadge(selectedVehicle)}
+        </div>
+        <div className="bus-eta-list">
+          <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
+            <div className="bus-eta-main">
+              <span className="bus-dest">{getVehicleHeading(selectedVehicle)}</span>
+            </div>
+            <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
+              <span className="bus-next-stop-label">{t(locale, 'nextStop')}</span>
+              <span className="bus-stop-name-highlight">{selectedVehicle.nextStopName}</span>
+            </div>
+            <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
+              <span className={`bus-eta-time ${selectedVehicle.isDelayed ? 'delayed' : ''}`}>
+                {getVehicleTime(selectedVehicle)}
+              </span>
+              {renderDelayBadge(selectedVehicle)}
+            </div>
+            <div className="map-access-live-state">
+              <span>
+                {loading
+                  ? t(locale, 'loading')
+                  : error || `${t(locale, 'updated')}: ${lastUpdated || '-'}`}
+              </span>
+              <button type="button" onClick={fetchAllBuses} disabled={loading}>
+                {t(locale, 'retry')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderVehicleAccessList = () => (
+    <div className="map-access-list">
+      {vehicles.length > 0 ? vehicles.map((vehicle) => (
+        <button
+          key={`access-${vehicle.busId}-${vehicle.route}`}
+          type="button"
+          className="map-access-item"
+          aria-label={`${t(locale, 'openMapItem')}: ${getVehicleLabel(vehicle)}`}
+          onClick={() => openVehicleDetails(vehicle)}
+        >
+          <span className={`map-access-shape ${vehicle.isDelayed ? 'important' : 'square'}`} aria-hidden="true">
+            {vehicle.isDelayed ? '!' : '■'}
+          </span>
+          <span className="map-access-item-text">
+            <span className="map-access-item-name">{vehicle.route} #{vehicle.busId}</span>
+            <span className="map-access-item-meta">
+              {t(locale, 'nextStop')} {vehicle.nextStopName} · {vehicle.timeText} · {getVehicleDelayLabel(vehicle)}
+            </span>
+          </span>
+        </button>
+      )) : (
+        <div className="map-access-empty">{loading ? t(locale, 'loading') : t(locale, 'noData')}</div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -180,6 +261,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
               <div className="bus-popup-header">
                 <span className="bus-route-badge">{v.route}</span>
                 <span className="bus-id-tag">{locale === 'en' ? 'Vehicle' : locale === 'zh-Hans' ? '车辆编号' : '車輛編號'} #{v.busId}</span>
+                {renderDelayBadge(v)}
               </div>
               
               <div className="bus-eta-list">
@@ -197,6 +279,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
                     <span className={`bus-eta-time ${v.isDelayed ? 'delayed' : ''}`}>
                       {getVehicleTime(v)}
                     </span>
+                    {renderDelayBadge(v)}
                   </div>
                 </div>
               </div>
@@ -220,64 +303,47 @@ export default function BusLayer({ locale }: BusLayerProps) {
 
       <details className="map-access-panel map-access-panel-live">
         <summary>{t(locale, 'liveBusAccessibleList')}</summary>
-        {selectedVehicle && (
-          <div className="map-access-selected map-access-selected-detail" role="region" aria-live="polite" aria-label={t(locale, 'mapItemSelected')}>
-            <div className="bus-popup-content">
-              <div className="bus-popup-header">
-                <span className="bus-route-badge">{selectedVehicle.route}</span>
-                <span className="bus-id-tag">{t(locale, 'vehicle')} #{selectedVehicle.busId}</span>
-              </div>
-              <div className="bus-eta-list">
-                <div className="bus-eta-item" style={{ borderBottom: 'none' }}>
-                  <div className="bus-eta-main">
-                    <span className="bus-dest">{getVehicleHeading(selectedVehicle)}</span>
-                  </div>
-                  <div className="bus-eta-footer" style={{ marginTop: '8px' }}>
-                    <span className="bus-next-stop-label">{t(locale, 'nextStop')}</span>
-                    <span className="bus-stop-name-highlight">{selectedVehicle.nextStopName}</span>
-                  </div>
-                  <div className="bus-eta-footer" style={{ marginTop: '6px' }}>
-                    <span className={`bus-eta-time ${selectedVehicle.isDelayed ? 'delayed' : ''}`}>
-                      {getVehicleTime(selectedVehicle)}
-                    </span>
-                  </div>
-                  <div className="map-access-live-state">
-                    <span>
-                      {loading
-                        ? t(locale, 'loading')
-                        : error || `${t(locale, 'updated')}: ${lastUpdated || '-'}`}
-                    </span>
-                    <button type="button" onClick={fetchAllBuses} disabled={loading}>
-                      {t(locale, 'retry')}
-                    </button>
-                  </div>
-                </div>
-              </div>
+        {renderSelectedVehicleDetails()}
+        {renderVehicleAccessList()}
+      </details>
+
+      <div className={`mobile-map-access-panel mobile-live-bus-panel ${mobileListOpen ? 'open' : ''}`}>
+        <button
+          ref={mobileToggleRef}
+          type="button"
+          className="mobile-map-access-toggle"
+          aria-expanded={mobileListOpen}
+          aria-controls={mobilePanelId}
+          onClick={() => setMobileListOpen((open) => !open)}
+        >
+          {t(locale, 'liveBusAccessibleList')}
+        </button>
+        {mobileListOpen && (
+          <div
+            id={mobilePanelId}
+            className="mobile-map-access-drawer"
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby={mobileTitleId}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                closeMobileList();
+              }
+            }}
+          >
+            <div className="mobile-map-access-header">
+              <h2 id={mobileTitleId}>{t(locale, 'liveBusAccessibleList')}</h2>
+              <button type="button" onClick={closeMobileList}>
+                {t(locale, 'closePanel')}
+              </button>
             </div>
+            {renderSelectedVehicleDetails()}
+            {renderVehicleAccessList()}
           </div>
         )}
-        <div className="map-access-list">
-          {vehicles.length > 0 ? vehicles.map((vehicle) => (
-            <button
-              key={`access-${vehicle.busId}-${vehicle.route}`}
-              type="button"
-              className="map-access-item"
-              aria-label={`${t(locale, 'openMapItem')}: ${getVehicleLabel(vehicle)}`}
-              onClick={() => openVehicleDetails(vehicle)}
-            >
-              <span className={`map-access-shape ${vehicle.isDelayed ? 'important' : 'square'}`} aria-hidden="true">
-                {vehicle.isDelayed ? '!' : '■'}
-              </span>
-              <span className="map-access-item-text">
-                <span className="map-access-item-name">{vehicle.route} #{vehicle.busId}</span>
-                <span className="map-access-item-meta">{t(locale, 'nextStop')} {vehicle.nextStopName} · {vehicle.timeText}</span>
-              </span>
-            </button>
-          )) : (
-            <div className="map-access-empty">{loading ? t(locale, 'loading') : t(locale, 'noData')}</div>
-          )}
-        </div>
-      </details>
+      </div>
     </>
   );
 }

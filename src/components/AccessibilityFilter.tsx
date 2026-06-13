@@ -1,12 +1,15 @@
 import { useState, useMemo, useId } from 'react';
 import accessibilityRaw from '../data/accessibilityData.json';
-import { Locale } from '../types';
+import stationsData from '../data/stations.json';
+import { Locale, StationMap } from '../types';
 import { t } from '../i18n';
 import { getLocalizedText } from '../data/zhHansText';
 
 const accessibilityData = accessibilityRaw as {
   categories: Record<string, { catId: string; catZh: string; catEn: string; zh: string; en: string; order: number }>;
+  facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
 };
+const stations = stationsData as StationMap;
 
 const categoryOrder = ['AJ', 'MJ', 'VJ', 'HJ'];
 const categoryIcons: Record<string, string> = {
@@ -101,13 +104,37 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
 
   const hasFilter = filter.length > 0;
   const localName = (value: { zh: string; en: string }) => getLocalizedText(value, locale);
+  const matchedStationIds = useMemo(() => {
+    if (!hasFilter) return [];
+    return Object.entries(accessibilityData.facilities)
+      .filter(([, facilities]) => filter.every((clause) => clause.some((code) => code in facilities)))
+      .map(([stationId]) => stationId);
+  }, [filter, hasFilter]);
+  const matchedStations = useMemo(() => (
+    matchedStationIds
+      .map((stationId) => ({ stationId, station: stations[stationId] }))
+      .filter((item): item is { stationId: string; station: StationMap[string] } => Boolean(item.station))
+      .map(({ stationId, station }) => ({ stationId, name: getLocalizedText(station, locale) }))
+  ), [matchedStationIds, locale]);
+  const filterStatusText = !hasFilter
+    ? t(locale, 'accessibilityFilterInactive')
+    : matchedStationIds.length === 0
+      ? t(locale, 'accessibilityFilterNoMatches')
+      : locale === 'en'
+        ? `${matchedStationIds.length} stations match the accessibility filter`
+        : locale === 'zh-Hans'
+          ? `${matchedStationIds.length} 个车站符合无障碍筛选`
+          : `${matchedStationIds.length} 個車站符合無障礙篩選`;
 
   return (
     <div className={`acc-filter-panel ${expanded ? 'expanded' : ''}`}>
+      <div className="sr-only" role="status" aria-live="polite">
+        {filterStatusText}
+      </div>
       <button
         type="button"
         className="acc-filter-toggle"
-        aria-label={t(locale, 'accessibilityFilter')}
+        aria-label={`${t(locale, 'accessibilityFilter')}: ${filterStatusText}`}
         aria-expanded={expanded}
         aria-controls={contentId}
         onClick={() => setExpanded(!expanded)}
@@ -124,6 +151,19 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
 
       {expanded && (
         <div id={contentId} className="acc-filter-content">
+          <div className="acc-filter-result" role="status" aria-live="polite">
+            <strong>{filterStatusText}</strong>
+            {hasFilter && matchedStations.length > 0 && (
+              <div className="acc-filter-match-list" aria-label={t(locale, 'accessibilityFilterMatchList')}>
+                <span>{t(locale, 'accessibilityFilterMatchList')}</span>
+                <ul>
+                  {matchedStations.map(({ stationId, name }) => (
+                    <li key={stationId}>{name}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
           {/* Mode toggle */}
           <fieldset className="acc-filter-mode-row">
             <legend className="sr-only">{t(locale, 'accessibilityFilter')}</legend>

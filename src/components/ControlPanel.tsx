@@ -95,7 +95,16 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
   }, [search, isOpen])
 
   return (
-    <div className="space-y-1 relative" ref={containerRef}>
+    <div
+      className="space-y-1 relative"
+      ref={containerRef}
+      onBlur={(event) => {
+        const nextTarget = event.relatedTarget as Node | null
+        if (isOpen && !event.currentTarget.contains(nextTarget)) {
+          closeDropdown()
+        }
+      }}
+    >
       <label id={labelId} htmlFor={triggerId} className="text-[10px] uppercase tracking-widest text-gray-600 font-black ml-1">{label}</label>
       <button
         id={triggerId}
@@ -108,7 +117,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
             setIsOpen(true)
           }
           if (event.key === 'Escape') {
-            closeDropdown()
+            closeDropdown(true)
           }
         }}
         aria-label={`${label}: ${selectedStation ? stationText(selectedStation) : placeholder}`}
@@ -126,7 +135,16 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
       </button>
 
       {isOpen && (
-        <div className="station-dropdown-menu absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-900 overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div
+          className="station-dropdown-menu absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-900 overflow-hidden animate-in fade-in zoom-in duration-200"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              event.stopPropagation()
+              closeDropdown(true)
+            }
+          }}
+        >
           <div className="station-dropdown-header p-2 border-b border-gray-100">
             <div className="station-dropdown-search relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
@@ -159,6 +177,8 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                     selectStation(visibleOptions[activeIndex].id)
                   }
                   if (event.key === 'Escape') {
+                    event.preventDefault()
+                    event.stopPropagation()
                     closeDropdown(true)
                   }
                 }}
