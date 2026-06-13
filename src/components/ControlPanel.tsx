@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useId } from 'react'
 import { TicketType } from '../types'
-import { Search, CreditCard, Ticket, ChevronDown, ArrowRightLeft } from 'lucide-react'
+import { Search, CreditCard, Ticket, ChevronDown, ArrowRightLeft, X } from 'lucide-react'
 import { getLineFilterOptions, getSelectableStations, getLocalizedLineDefinitionLabel } from '../data/unifiedNetwork'
 import { Locale } from '../types'
 import { t } from '../i18n'
@@ -16,6 +16,8 @@ interface SearchableDropdownProps {
   locale: Locale
 }
 
+const MAX_VISIBLE_STATIONS = 80
+
 const accentStyles = {
   slate: {
     border: 'border-slate-900',
@@ -30,8 +32,11 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
   const [search, setSearch] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const triggerId = useId()
+  const labelId = useId()
   const listboxId = useId()
+  const statusId = useId()
   
   const styles = accentStyles[accentColor as keyof typeof accentStyles]
 
@@ -41,23 +46,44 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
     o.zh.includes(search) ||
     o.en.toLowerCase().includes(search.toLowerCase())
   )
+  const visibleOptions = filteredOptions.slice(0, MAX_VISIBLE_STATIONS)
   const stationText = (station?: { zh: string; zhHans?: string; en: string }) => {
     if (!station) return ''
     return getLocalizedText(station, locale)
   }
   const noStationText = locale === 'en' ? 'No stations found' : locale === 'zh-Hans' ? '没有找到车站' : '找不到車站'
-  const activeOptionId = filteredOptions[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined
+  const closeText = locale === 'en' ? 'Close station selector' : locale === 'zh-Hans' ? '关闭车站选择器' : '關閉車站選擇器'
+  const hiddenOptionCount = Math.max(filteredOptions.length - visibleOptions.length, 0)
+  const resultStatusText = hiddenOptionCount > 0
+    ? locale === 'en'
+      ? `Showing ${visibleOptions.length} of ${filteredOptions.length} stations. Type more to narrow the list.`
+      : locale === 'zh-Hans'
+        ? `正在显示 ${filteredOptions.length} 个车站中的前 ${visibleOptions.length} 个。继续输入可缩小列表。`
+        : `正在顯示 ${filteredOptions.length} 個車站中的前 ${visibleOptions.length} 個。繼續輸入可縮小列表。`
+    : locale === 'en'
+      ? `${filteredOptions.length} stations available`
+      : locale === 'zh-Hans'
+        ? `可选 ${filteredOptions.length} 个车站`
+        : `可選 ${filteredOptions.length} 個車站`
+  const activeOptionId = visibleOptions[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined
+
+  const closeDropdown = (restoreFocus = false) => {
+    setIsOpen(false)
+    if (restoreFocus) {
+      requestAnimationFrame(() => triggerRef.current?.focus())
+    }
+  }
 
   const selectStation = (id: string) => {
     onChange(id)
-    setIsOpen(false)
+    closeDropdown(true)
     setSearch('')
   }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        closeDropdown()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -70,9 +96,10 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
 
   return (
     <div className="space-y-1 relative" ref={containerRef}>
-      <label htmlFor={triggerId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{label}</label>
+      <label id={labelId} htmlFor={triggerId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{label}</label>
       <button
         id={triggerId}
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={(event) => {
@@ -81,9 +108,10 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
             setIsOpen(true)
           }
           if (event.key === 'Escape') {
-            setIsOpen(false)
+            closeDropdown()
           }
         }}
+        aria-label={`${label}: ${selectedStation ? stationText(selectedStation) : placeholder}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
@@ -99,15 +127,20 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
 
       {isOpen && (
         <div className="station-dropdown-menu absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-900 overflow-hidden animate-in fade-in zoom-in duration-200">
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
+          <div className="station-dropdown-header p-2 border-b border-gray-100">
+            <div className="station-dropdown-search relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 autoFocus
                 type="text"
-                aria-label={locale === 'en' ? 'Search station' : locale === 'zh-Hans' ? '搜索车站' : '搜尋車站'}
+                role="combobox"
+                aria-labelledby={labelId}
+                aria-label={locale === 'en' ? `Search ${label}` : locale === 'zh-Hans' ? `搜索${label}` : `搜尋${label}`}
+                aria-expanded={isOpen}
+                aria-autocomplete="list"
                 aria-controls={listboxId}
                 aria-activedescendant={activeOptionId}
+                aria-describedby={statusId}
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:bg-white transition-colors"
                 placeholder={locale === 'en' ? 'Search station...' : locale === 'zh-Hans' ? '搜索车站...' : '搜尋車站...'}
                 value={search}
@@ -115,30 +148,43 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                 onKeyDown={(event) => {
                   if (event.key === 'ArrowDown') {
                     event.preventDefault()
-                    setActiveIndex((index) => filteredOptions.length > 0 ? Math.min(index + 1, filteredOptions.length - 1) : 0)
+                    setActiveIndex((index) => visibleOptions.length > 0 ? Math.min(index + 1, visibleOptions.length - 1) : 0)
                   }
                   if (event.key === 'ArrowUp') {
                     event.preventDefault()
-                    setActiveIndex((index) => filteredOptions.length > 0 ? Math.max(index - 1, 0) : 0)
+                    setActiveIndex((index) => visibleOptions.length > 0 ? Math.max(index - 1, 0) : 0)
                   }
-                  if (event.key === 'Enter' && filteredOptions[activeIndex]) {
+                  if (event.key === 'Enter' && visibleOptions[activeIndex]) {
                     event.preventDefault()
-                    selectStation(filteredOptions[activeIndex].id)
+                    selectStation(visibleOptions[activeIndex].id)
                   }
                   if (event.key === 'Escape') {
-                    setIsOpen(false)
+                    closeDropdown(true)
                   }
                 }}
               />
             </div>
+            <button
+              type="button"
+              className="station-dropdown-close"
+              onClick={() => closeDropdown(true)}
+              aria-label={closeText}
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <div id={listboxId} role="listbox" aria-labelledby={triggerId} className="station-dropdown-list max-h-60 overflow-y-auto p-1 custom-scrollbar">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((s, index) => (
+          <div id={statusId} className="station-search-status" aria-live="polite">
+            {resultStatusText}
+          </div>
+          <div id={listboxId} role="listbox" aria-labelledby={labelId} className="station-dropdown-list max-h-60 overflow-y-auto p-1 custom-scrollbar">
+            {visibleOptions.length > 0 ? (
+              visibleOptions.map((s, index) => (
                 <button
                   type="button"
                   role="option"
                   aria-selected={value === s.id}
+                  aria-posinset={index + 1}
+                  aria-setsize={filteredOptions.length}
                   id={`${listboxId}-option-${index}`}
                   key={s.id}
                   onClick={() => selectStation(s.id)}
@@ -151,7 +197,7 @@ const SearchableDropdown = ({ label, options, value, onChange, placeholder, acce
                 </button>
               ))
             ) : (
-              <div className="p-4 text-center text-sm text-gray-400">{noStationText}</div>
+              <div role="option" aria-disabled="true" className="p-4 text-center text-sm text-gray-400">{noStationText}</div>
             )}
           </div>
         </div>
@@ -181,6 +227,8 @@ const ControlPanel = ({
 }: ControlPanelProps) => {
   const [originLine, setOriginLine] = useState<string>('ALL')
   const [destLine, setDestLine] = useState<string>('ALL')
+  const originLineId = useId()
+  const destLineId = useId()
 
   const lineOptions = [{ code: 'ALL', zh: '所有路線', zhHans: '所有线路', en: 'All Routes', category: 'MTR' as const }, ...getLineFilterOptions()]
   const getFilteredStations = (lineCode: string) => {
@@ -217,8 +265,11 @@ const ControlPanel = ({
     <div className="control-panel-card bg-white p-6 rounded-2xl shadow-xl border border-gray-100 space-y-6">
       {/* Ticket Type Toggle */}
       <div className="flex justify-center">
-        <div className="ticket-type-toggle bg-gray-100 p-1 rounded-xl flex gap-1 w-full max-w-sm">
+        <div className="ticket-type-toggle bg-gray-100 p-1 rounded-xl flex gap-1 w-full max-w-sm" role="radiogroup" aria-label={t(locale, 'ticketType')}>
           <button
+            type="button"
+            role="radio"
+            aria-checked={ticketType === 'octopus'}
             onClick={() => onTicketTypeChange('octopus')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-bold text-sm transition-all ${
               ticketType === 'octopus' 
@@ -230,6 +281,9 @@ const ControlPanel = ({
             {t(locale, 'ticketOctopus')}
           </button>
           <button
+            type="button"
+            role="radio"
+            aria-checked={ticketType === 'single'}
             onClick={() => onTicketTypeChange('single')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-bold text-sm transition-all ${
               ticketType === 'single' 
@@ -253,8 +307,9 @@ const ControlPanel = ({
           
           <div className="route-form-fields space-y-3">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'selectLine')}</label>
+              <label htmlFor={originLineId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'startingPoint')} {t(locale, 'selectLine')}</label>
               <select 
+                id={originLineId}
                 className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"
                 value={originLine}
                 onChange={(e) => {
@@ -269,7 +324,7 @@ const ControlPanel = ({
             </div>
 
               <SearchableDropdown 
-                label={t(locale, 'selectStation')}
+                label={`${t(locale, 'startingPoint')} ${t(locale, 'selectStation')}`}
                 options={originStations}
                 value={originId}
                 onChange={onOriginChange}
@@ -283,9 +338,11 @@ const ControlPanel = ({
         {/* Swap Button */}
         <div className="swap-station-row flex justify-center items-center md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-10 my-4 md:my-0">
           <button 
+            type="button"
             onClick={handleSwap}
             className="bg-white border-2 border-gray-100 p-2.5 rounded-full shadow-lg hover:shadow-xl hover:border-gray-200 transition-all hover:rotate-180 duration-300"
             title={t(locale, 'swapStations')}
+            aria-label={t(locale, 'swapStations')}
           >
             <ArrowRightLeft className="w-4 h-4 text-gray-400" />
           </button>
@@ -300,8 +357,9 @@ const ControlPanel = ({
 
           <div className="route-form-fields space-y-3">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'selectLine')}</label>
+              <label htmlFor={destLineId} className="text-[10px] uppercase tracking-widest text-gray-400 font-black ml-1">{t(locale, 'finalDestination')} {t(locale, 'selectLine')}</label>
               <select 
+                id={destLineId}
                 className="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all outline-none text-sm font-medium"
                 value={destLine}
                 onChange={(e) => {
@@ -316,7 +374,7 @@ const ControlPanel = ({
             </div>
 
               <SearchableDropdown 
-              label={t(locale, 'selectStation')}
+              label={`${t(locale, 'finalDestination')} ${t(locale, 'selectStation')}`}
                 options={destStations}
                 value={destinationId}
                 onChange={onDestinationChange}

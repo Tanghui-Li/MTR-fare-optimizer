@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { fetchNextTrain, NextTrainEntry, stationCodeToId, stationIdToCode } from '../services/mtrApi';
 import { lineColors, getLocalizedLineName } from '../data/lineColors';
@@ -42,15 +42,22 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [isOpen, setIsOpen] = useState(false);
+  const isOpenRef = useRef(false);
+  const requestSeqRef = useRef(0);
 
   const loadTrainData = useCallback(async () => {
+    const requestSeq = requestSeqRef.current + 1;
+    requestSeqRef.current = requestSeq;
     setLoading(true);
     setError(null);
 
     const stationCode = stationIdToCode[stationId];
     if (!stationCode) {
-      setError(locale === 'en' ? 'Unknown station code' : locale === 'zh-Hans' ? '车站代码未知' : '車站代碼未知');
-      setLoading(false);
+      if (isOpenRef.current && requestSeqRef.current === requestSeq) {
+        setError(locale === 'en' ? 'Unknown station code' : locale === 'zh-Hans' ? '车站代码未知' : '車站代碼未知');
+        setLoading(false);
+      }
       return;
     }
 
@@ -59,7 +66,9 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
     try {
       // Query each line that passes through this station
       for (const lineCode of lines) {
+        if (!isOpenRef.current || requestSeqRef.current !== requestSeq) return;
         const resp = await fetchNextTrain(lineCode, stationCode);
+        if (!isOpenRef.current || requestSeqRef.current !== requestSeq) return;
         if (resp.status === 1 && resp.data) {
           const key = `${lineCode}-${stationCode}`;
           const data = resp.data[key];
@@ -83,21 +92,38 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
         }
       }
 
+      if (!isOpenRef.current || requestSeqRef.current !== requestSeq) return;
       setTrainData(allDirections);
       setLastUpdated(new Date().toLocaleTimeString(locale === 'en' ? 'en-GB' : 'zh-HK'));
     } catch (e) {
+      if (!isOpenRef.current || requestSeqRef.current !== requestSeq) return;
       setError(locale === 'en' ? 'Unable to fetch train information' : locale === 'zh-Hans' ? '无法获取列车信息' : '無法獲取列車資訊');
       console.error('Next train fetch error:', e);
+    } finally {
+      if (isOpenRef.current && requestSeqRef.current === requestSeq) {
+        setLoading(false);
+      }
     }
-
-    setLoading(false);
   }, [stationId, lines, locale]);
 
-  useEffect(() => {
-    loadTrainData();
-    const interval = setInterval(loadTrainData, 30000); // Refresh every 30s
-    return () => clearInterval(interval);
+  const handlePopupOpen = useCallback(() => {
+    isOpenRef.current = true;
+    setIsOpen(true);
+    void loadTrainData();
   }, [loadTrainData]);
+
+  const handlePopupClose = useCallback(() => {
+    isOpenRef.current = false;
+    requestSeqRef.current += 1;
+    setIsOpen(false);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = window.setInterval(() => void loadTrainData(), 30000);
+    return () => clearInterval(interval);
+  }, [isOpen, loadTrainData]);
 
   // Get station code for the dest field
   const getDestName = (destCode: string): string => {
@@ -159,7 +185,12 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
   const hasAccessibility = accessibilityInfo && Object.keys(accessibilityInfo).length > 0;
 
   return (
-    <Popup className="station-popup" maxWidth={480} minWidth={380}>
+    <Popup
+      className="station-popup"
+      maxWidth={480}
+      minWidth={380}
+      eventHandlers={{ add: handlePopupOpen, remove: handlePopupClose }}
+    >
       <div className="popup-content">
         {/* Station header */}
         <div className="popup-header">
@@ -267,10 +298,10 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
         </div>
 
         {/* Footer */}
-        {lastUpdated && (
+        {isOpen && (
           <div className="popup-footer">
-            <span className="popup-update-time">{t(locale, 'updated')}: {lastUpdated}</span>
-            <button className="popup-refresh-btn" onClick={loadTrainData} disabled={loading}>
+            <span className="popup-update-time">{lastUpdated ? `${t(locale, 'updated')}: ${lastUpdated}` : ''}</span>
+            <button type="button" className="popup-refresh-btn" onClick={loadTrainData} disabled={loading}>
               {loading ? '⟳' : `↻ ${t(locale, 'refresh')}`}
             </button>
           </div>

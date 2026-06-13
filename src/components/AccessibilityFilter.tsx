@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { Locale } from '../types';
 import { t } from '../i18n';
@@ -25,6 +25,9 @@ interface AccessibilityFilterProps {
 export default function AccessibilityFilter({ filter, onFilterChange, locale }: AccessibilityFilterProps) {
   const [expanded, setExpanded] = useState(false);
   const [isAdvanced, setIsAdvanced] = useState(false);
+  const contentId = useId();
+  const simplePanelId = useId();
+  const advancedPanelId = useId();
 
   // Group items by category
   const grouped = useMemo(() => {
@@ -61,8 +64,10 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
 
   const toggleSimple = (code: string) => {
     if (selectedCodes.has(code)) {
-      // Remove clause containing this code
-      onFilterChange(filter.filter(clause => !(clause.length === 1 && clause[0] === code)));
+      const nextFilter = filter
+        .map(clause => clause.filter(item => item !== code))
+        .filter(clause => clause.length > 0);
+      onFilterChange(nextFilter);
     } else {
       onFilterChange([...filter, [code]]);
     }
@@ -103,6 +108,7 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
         className="acc-filter-toggle"
         aria-label={t(locale, 'accessibilityFilter')}
         aria-expanded={expanded}
+        aria-controls={contentId}
         onClick={() => setExpanded(!expanded)}
       >
         <span className="acc-filter-toggle-icon">
@@ -116,23 +122,31 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
       </button>
 
       {expanded && (
-        <div className="acc-filter-content">
+        <div id={contentId} className="acc-filter-content">
           {/* Mode toggle */}
-          <div className="acc-filter-mode-row">
+          <div className="acc-filter-mode-row" role="radiogroup" aria-label={t(locale, 'accessibilityFilter')}>
             <button
+              type="button"
+              role="radio"
+              aria-checked={!isAdvanced}
+              aria-controls={simplePanelId}
               className={`acc-filter-mode-btn ${!isAdvanced ? 'active' : ''}`}
-              onClick={() => { setIsAdvanced(false); clearAll(); }}
+              onClick={() => { setIsAdvanced(false); setPendingClause(new Set()); }}
             >
               {t(locale, 'simpleFilter')}
             </button>
             <button
+              type="button"
+              role="radio"
+              aria-checked={isAdvanced}
+              aria-controls={advancedPanelId}
               className={`acc-filter-mode-btn ${isAdvanced ? 'active' : ''}`}
-              onClick={() => { setIsAdvanced(true); clearAll(); }}
+              onClick={() => setIsAdvanced(true)}
             >
               {t(locale, 'advancedFilterReadable')}
             </button>
             {hasFilter && (
-              <button className="acc-filter-clear-btn" onClick={clearAll}>
+              <button type="button" className="acc-filter-clear-btn" onClick={clearAll}>
                 {t(locale, 'clearAll')}
               </button>
             )}
@@ -140,7 +154,7 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
 
           {!isAdvanced && (
             /* Simple mode: checkboxes, each = AND clause */
-            <div className="acc-filter-simple">
+            <div id={simplePanelId} className="acc-filter-simple" role="region" aria-label={t(locale, 'simpleFilter')}>
               <div className="acc-filter-hint">{t(locale, 'accessibilitySimpleHint')}</div>
               {categoryOrder.map(catId => {
                 const group = grouped[catId];
@@ -175,7 +189,7 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
 
           {isAdvanced && (
             /* Advanced CNF mode */
-            <div className="acc-filter-advanced">
+            <div id={advancedPanelId} className="acc-filter-advanced" role="region" aria-label={t(locale, 'advancedFilterReadable')}>
               <div className="acc-filter-hint">
                 {t(locale, 'accessibilityAdvancedHint')}
               </div>
@@ -185,7 +199,14 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
                 <div key={idx} className="acc-filter-clause">
                   <div className="acc-filter-clause-header">
                     <span className="acc-filter-clause-num">{t(locale, 'filterGroup')} {idx + 1}</span>
-                    <button className="acc-filter-clause-remove" onClick={() => removeClause(idx)}>✕</button>
+                    <button
+                      type="button"
+                      className="acc-filter-clause-remove"
+                      onClick={() => removeClause(idx)}
+                      aria-label={`${t(locale, 'clearAll')} ${t(locale, 'filterGroup')} ${idx + 1}`}
+                    >
+                      ✕
+                    </button>
                   </div>
                   <div className="acc-filter-clause-tags">
                     {clause.map(code => (
@@ -235,6 +256,7 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
                   })}
                 </div>
                 <button
+                  type="button"
                   className="acc-filter-add-clause-btn"
                   onClick={addClause}
                   disabled={pendingClause.size === 0}

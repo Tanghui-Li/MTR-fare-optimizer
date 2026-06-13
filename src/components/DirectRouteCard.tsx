@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { StationMap, StationMetadata, DetailedSegment, PathStep, Locale } from '../types'
 import { lineColors, getLocalizedLineName } from '../data/lineColors'
 import { ArrowRight, MapPin, LogIn, ChevronDown, ChevronRight } from 'lucide-react'
@@ -42,6 +42,7 @@ function groupByLine(path: PathStep[]): { lineCode: string; stations: string[] }
 
 const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRouteCardProps) => {
   const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
+  const detailIdPrefix = useId();
 
   useEffect(() => {
     setExpandedSegments(new Set(detailedSegments.map((_, idx) => idx)));
@@ -96,6 +97,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
             const transferCount = Math.max(displayLineGroups.length - 1, 0);
             const showTransferNote = Boolean(prevSeg && prevSeg.to !== seg.from);
             const transferFrom = prevSeg ? stations?.[prevSeg.to] : undefined;
+            const detailId = `${detailIdPrefix}-segment-${segIdx}`;
 
             return (
               <div key={segIdx} className="route-segment">
@@ -142,8 +144,11 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
                 {/* Segment details (expandable) */}
                 <div className="route-segment-body">
                   <button
+                    type="button"
                     className="route-segment-summary"
                     onClick={() => toggleSegment(segIdx)}
+                    aria-expanded={isExpanded}
+                    aria-controls={detailId}
                   >
                     <div className="route-segment-lines">
                       {displayLineGroups.map((g, gi) => (
@@ -164,7 +169,7 @@ const DirectRouteCard = ({ fare, stations, detailedSegments, locale }: DirectRou
 
                   {/* Expanded path detail */}
                   {isExpanded && (
-                    <div className="route-segment-detail">
+                    <div id={detailId} className="route-segment-detail">
                       {displayLineGroups.map((group, gi) => (
                         <div key={gi} className="route-line-group">
                           <div className="route-line-group-header">

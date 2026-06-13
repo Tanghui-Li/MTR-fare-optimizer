@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { fetchLrtSchedule, LrtPlatform } from '../services/mtrApi';
 import { Locale } from '../types';
@@ -14,41 +14,57 @@ export default function LRTPopup({ stationId, stationName, locale }: LRTPopupPro
   const [platforms, setPlatforms] = useState<LrtPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const isOpenRef = useRef(false);
+  const requestSeqRef = useRef(0);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function load() {
-      try {
-        setLoading(true);
-        // Ensure stationId is treated as a clean string without redundant padding if needed, 
-        // though our curl showed 015 works.
-        const data = await fetchLrtSchedule(stationId);
-        if (isMounted) {
-          setPlatforms(data.platform_list || []);
-          setLoading(false);
-          setError(null);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(locale === 'en' ? 'Unable to load live data' : locale === 'zh-Hans' ? '无法加载实时数据' : '無法載入即時資料');
-          setLoading(false);
-        }
+  const load = useCallback(async () => {
+    const requestSeq = requestSeqRef.current + 1;
+    requestSeqRef.current = requestSeq;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await fetchLrtSchedule(stationId);
+      if (isOpenRef.current && requestSeqRef.current === requestSeq) {
+        setPlatforms(data.platform_list || []);
+      }
+    } catch (err) {
+      if (isOpenRef.current && requestSeqRef.current === requestSeq) {
+        setError(locale === 'en' ? 'Unable to load live data' : locale === 'zh-Hans' ? '无法加载实时数据' : '無法載入即時資料');
+      }
+    } finally {
+      if (isOpenRef.current && requestSeqRef.current === requestSeq) {
+        setLoading(false);
       }
     }
-
-    load();
-    const interval = setInterval(load, 30000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
   }, [stationId, locale]);
+
+  const handlePopupOpen = useCallback(() => {
+    isOpenRef.current = true;
+    setIsOpen(true);
+    void load();
+  }, [load]);
+
+  const handlePopupClose = useCallback(() => {
+    isOpenRef.current = false;
+    requestSeqRef.current += 1;
+    setIsOpen(false);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = window.setInterval(() => void load(), 30000);
+    return () => window.clearInterval(interval);
+  }, [isOpen, load]);
 
   return (
     <Popup 
       className="lrt-popup" 
       minWidth={280} 
       maxWidth={280}
+      eventHandlers={{ add: handlePopupOpen, remove: handlePopupClose }}
     >
       <div className="lrt-popup-content">
         <div className="lrt-popup-header">

@@ -162,49 +162,55 @@ export default function MapView({
   return (
     <div className="map-container">
       {/* Map Controls Bar */}
-      <div className={`map-controls-bar ${mobileLayerControlsOpen ? 'mobile-open' : ''}`}>
-        <div className={`map-control-group ${mobileLayerControlsOpen ? 'mobile-open' : ''}`}>
+      <div id="map-layer-controls" className={`map-controls-bar ${mobileLayerControlsOpen ? 'mobile-open' : ''}`}>
+        <div className={`map-control-group ${mobileLayerControlsOpen ? 'mobile-open' : ''}`} role="group" aria-label={t(locale, 'mapLayers')}>
           <label className="map-toggle">
             <input
               type="checkbox"
               checked={showLRT}
+              aria-label={t(locale, 'mapLightRail')}
               onChange={(e) => setShowLRT(e.target.checked)}
             />
             <span className="map-toggle-slider" />
             <span className="map-toggle-label">
-              <span className="lrt-icon-dot" />
+              <span className="lrt-icon-dot" aria-hidden="true" />
               {t(locale, 'mapLightRail')}
+              <span className="map-toggle-status">{showLRT ? t(locale, 'enabled') : t(locale, 'disabled')}</span>
             </span>
           </label>
           <label className="map-toggle">
             <input
               type="checkbox"
               checked={showBusStops}
+              aria-label={t(locale, 'mapBusStops')}
               onChange={(e) => setShowBusStops(e.target.checked)}
             />
             <span className="map-toggle-slider" />
             <span className="map-toggle-label">
-              <span className="bus-stop-icon-dot" />
+              <span className="bus-stop-icon-dot" aria-hidden="true" />
               {t(locale, 'mapBusStops')}
+              <span className="map-toggle-status">{showBusStops ? t(locale, 'enabled') : t(locale, 'disabled')}</span>
             </span>
           </label>
           <label className="map-toggle">
             <input
               type="checkbox"
               checked={showBuses}
+              aria-label={t(locale, 'mapLiveBuses')}
               onChange={(e) => setShowBuses(e.target.checked)}
             />
             <span className="map-toggle-slider" />
             <span className="map-toggle-label">
-              <span className="bus-icon-dot" />
+              <span className="bus-icon-dot" aria-hidden="true" />
               {t(locale, 'mapLiveBuses')}
+              <span className="map-toggle-status">{showBuses ? t(locale, 'enabled') : t(locale, 'disabled')}</span>
             </span>
           </label>
         </div>
-        <div className="map-legend">
+        <div className="map-legend" aria-label={t(locale, 'mapLegendTitle')}>
           {Object.entries(lineColors).map(([code, color]) => (
             <span key={code} className="legend-item">
-              <span className="legend-dot" style={{ backgroundColor: color }} />
+              <span className="legend-dot" style={{ backgroundColor: color }} aria-hidden="true" />
               <span className="legend-text">{getLocalizedLineName(code, locale)}</span>
             </span>
           ))}
@@ -351,6 +357,7 @@ export default function MapView({
                   {role === 'origin' && <><br /><span style={{ color: '#16a34a', fontWeight: 600, fontSize: '11px' }}>🟢 {locale === 'en' ? 'Origin' : locale === 'zh-Hans' ? '起点' : '起點'}</span></>}
                   {role === 'destination' && <><br /><span style={{ color: '#dc2626', fontWeight: 600, fontSize: '11px' }}>🔴 {locale === 'en' ? 'Destination' : locale === 'zh-Hans' ? '终点' : '終點'}</span></>}
                   {role === 'exitReenter' && <><br /><span style={{ color: '#ea580c', fontWeight: 600, fontSize: '11px' }}>🟠 {locale === 'en' ? 'Exit & Re-enter' : locale === 'zh-Hans' ? '出闸再入闸' : '出閘再入閘'}</span></>}
+                  {isAccHighlighted && <><br /><span style={{ color: '#6d28d9', fontWeight: 600, fontSize: '11px' }}>◆ {t(locale, 'accessibilityFilterMatch')}</span></>}
                 </div>
               </Tooltip>
               <StationPopup

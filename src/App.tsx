@@ -7,9 +7,10 @@ import { findMultimodalRoute } from './routePlanner'
 import { unifiedStationMap } from './data/unifiedNetwork'
 import { getFareMatrix } from './data/mtrFareMatrix'
 import { RouteResult, StationMap, TicketType, DetailedSegment, Locale } from './types'
-import { localeOptions, t } from './i18n'
+import { formatCurrency, localeOptions, t } from './i18n'
 import { SlidersHorizontal } from 'lucide-react'
 import { useMobileSheetDrag } from './hooks/useMobileSheetDrag'
+import { getLocalizedText } from './data/zhHansText'
 
 const stations = unifiedStationMap as StationMap
 type RouteMode = 'optimized' | 'boring';
@@ -26,6 +27,43 @@ function getRouteSheetHeight() {
 
 function isMobileViewport() {
   return typeof window !== 'undefined' && window.matchMedia(MOBILE_SHEET_QUERY).matches;
+}
+
+interface MobileRouteSummaryProps {
+  routeResult: RouteResult
+  stations: StationMap
+  originId: string
+  destinationId: string
+  directFare: number
+  locale: Locale
+}
+
+function MobileRouteSummary({ routeResult, stations, originId, destinationId, directFare, locale }: MobileRouteSummaryProps) {
+  const origin = stations[originId]
+  const destination = stations[destinationId]
+  const savings = directFare - routeResult.totalFare
+  const hasSavings = savings > 0.01
+
+  if (!origin || !destination) return null
+
+  return (
+    <section className="mobile-route-summary" role="status" aria-live="polite" aria-label={t(locale, 'routeResultSummary')}>
+      <div className="mobile-route-summary-main">
+        <span className="mobile-route-summary-label">
+          {hasSavings ? t(locale, 'optimizedRoute') : t(locale, 'standardBestRoute')}
+        </span>
+        <strong className="mobile-route-summary-fare">{formatCurrency(routeResult.totalFare)}</strong>
+      </div>
+      <div className="mobile-route-summary-route">
+        {getLocalizedText(origin, locale)}
+        <span aria-hidden="true">→</span>
+        {getLocalizedText(destination, locale)}
+      </div>
+      <div className="mobile-route-summary-note">
+        {hasSavings ? `${t(locale, 'youSaved')} ${formatCurrency(savings)}` : t(locale, 'noSavingsTitle')}
+      </div>
+    </section>
+  )
 }
 
 function App() {
@@ -128,6 +166,8 @@ function App() {
                 className="map-layer-toggle-button"
                 onClick={() => setMobileLayerControlsOpen((open) => !open)}
                 aria-expanded={mobileLayerControlsOpen}
+                aria-controls="map-layer-controls"
+                aria-label={t(locale, 'mapLayers')}
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 {t(locale, 'mapLayers')}
@@ -187,6 +227,17 @@ function App() {
               onTicketTypeChange={(type) => setSearchParams(prev => ({ ...prev, ticketType: type }))}
               locale={locale}
             />
+
+            {routeResult && displayedRouteInfo.originId && displayedRouteInfo.destinationId && (
+              <MobileRouteSummary
+                routeResult={routeResult}
+                stations={stations}
+                originId={displayedRouteInfo.originId}
+                destinationId={displayedRouteInfo.destinationId}
+                directFare={displayedRouteInfo.directFare}
+                locale={locale}
+              />
+            )}
 
             {routeResult && displayedRouteInfo.originId && displayedRouteInfo.destinationId && (
               <RouteVisualizer 
