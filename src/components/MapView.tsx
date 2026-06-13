@@ -58,6 +58,8 @@ type MapSelectedItem =
   | { kind: 'busStop'; title: string; detail: string; routes: string[] }
   | { kind: 'lrt'; stationId: string; stationName: string; detail: string };
 
+type MobileMapDrawer = 'mapItems' | 'liveBuses' | null;
+
 function getStationRoleLabel(role: string | null, locale: Locale) {
   if (role === 'originDestination') return t(locale, 'sameStationTitle');
   if (role === 'origin') return t(locale, 'startingPoint');
@@ -76,6 +78,8 @@ function MapAccessPanel({
   showBusStops,
   showLRT,
   highlightedStationIds,
+  mobileOpen,
+  onMobileOpenChange,
 }: {
   stationMarkers: StationMarker[];
   routeKeyStationIds: string[];
@@ -86,10 +90,11 @@ function MapAccessPanel({
   showBusStops: boolean;
   showLRT: boolean;
   highlightedStationIds: Set<string> | null;
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
 }) {
   const map = useMap();
   const [selectedItem, setSelectedItem] = useState<MapSelectedItem | null>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const mobileToggleRef = useRef<HTMLButtonElement>(null);
   const mobilePanelId = useId();
   const mobileTitleId = useId();
@@ -116,7 +121,7 @@ function MapAccessPanel({
   };
 
   const closeMobilePanel = () => {
-    setMobileOpen(false);
+    onMobileOpenChange(false);
     requestAnimationFrame(() => mobileToggleRef.current?.focus());
   };
 
@@ -301,7 +306,7 @@ function MapAccessPanel({
           className="mobile-map-access-toggle"
           aria-expanded={mobileOpen}
           aria-controls={mobilePanelId}
-          onClick={() => setMobileOpen((open) => !open)}
+          onClick={() => onMobileOpenChange(!mobileOpen)}
         >
           {t(locale, 'accessibleMapItems')}
         </button>
@@ -394,20 +399,7 @@ export default function MapView({
   showBuses, showBusStops, showLRT, setShowBuses, setShowBusStops, setShowLRT, mobileLayerControlsOpen,
   accessibilityFilter
 }: MapViewProps) {
-
-  // Compute highlighted stations based on accessibility filter (CNF)
-  const highlightedStationIds = useMemo(() => {
-    if (accessibilityFilter.length === 0) return null; // null = no filter active
-    const result = new Set<string>();
-    for (const [sid, facs] of Object.entries(accessibilityData.facilities)) {
-      // Check CNF: every clause must have at least one matching facility
-      const match = accessibilityFilter.every(clause =>
-        clause.some(code => code in facs)
-      );
-      if (match) result.add(sid);
-    }
-    return result;
-  }, [accessibilityFilter]);
+  const [mobileMapDrawer, setMobileMapDrawer] = useState<MobileMapDrawer>(null);
 
   // Compute which lines pass through each station
   const stationLines = useMemo(() => getStationLines(lines), []);
@@ -444,6 +436,27 @@ export default function MapView({
     }
     return markers;
   }, [stationLines]);
+
+  // Compute highlighted stations from the same marker set that can be listed and opened.
+  const highlightedStationIds = useMemo(() => {
+    if (accessibilityFilter.length === 0) return null; // null = no filter active
+    const result = new Set<string>();
+    for (const marker of stationMarkers) {
+      const facilities = accessibilityData.facilities[marker.id];
+      if (!facilities) continue;
+      const match = accessibilityFilter.every((clause) =>
+        clause.some((code) => code in facilities)
+      );
+      if (match) result.add(marker.id);
+    }
+    return result;
+  }, [accessibilityFilter, stationMarkers]);
+
+  useEffect(() => {
+    if (!showBuses && mobileMapDrawer === 'liveBuses') {
+      setMobileMapDrawer(null);
+    }
+  }, [showBuses, mobileMapDrawer]);
 
   // Determine if a station is origin/destination/exitReenter for special rendering
   const getStationRole = (stationId: string) => {
@@ -683,7 +696,13 @@ export default function MapView({
 
         <Suspense fallback={<div className="map-layer-loading" role="status">{t(locale, 'loading')}</div>}>
           {/* MTR Bus Layer (live vehicles) */}
-          {showBuses && <BusLayer locale={locale} />}
+          {showBuses && (
+            <BusLayer
+              locale={locale}
+              mobileListOpen={mobileMapDrawer === 'liveBuses'}
+              onMobileListOpenChange={(open) => setMobileMapDrawer(open ? 'liveBuses' : null)}
+            />
+          )}
 
           {/* MTR Bus Stop Locations */}
           {showBusStops && <BusStopLayer locale={locale} />}
@@ -702,6 +721,8 @@ export default function MapView({
           showBusStops={showBusStops}
           showLRT={showLRT}
           highlightedStationIds={highlightedStationIds}
+          mobileOpen={mobileMapDrawer === 'mapItems'}
+          onMobileOpenChange={(open) => setMobileMapDrawer(open ? 'mapItems' : null)}
         />
       </MapContainer>
 

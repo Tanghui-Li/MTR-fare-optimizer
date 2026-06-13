@@ -104,27 +104,23 @@ export default function AccessibilityFilter({ filter, onFilterChange, locale }: 
 
   const hasFilter = filter.length > 0;
   const localName = (value: { zh: string; en: string }) => getLocalizedText(value, locale);
-  const matchedStationIds = useMemo(() => {
+  const matchedStations = useMemo(() => {
     if (!hasFilter) return [];
     return Object.entries(accessibilityData.facilities)
-      .filter(([, facilities]) => filter.every((clause) => clause.some((code) => code in facilities)))
-      .map(([stationId]) => stationId);
-  }, [filter, hasFilter]);
-  const matchedStations = useMemo(() => (
-    matchedStationIds
-      .map((stationId) => ({ stationId, station: stations[stationId] }))
-      .filter((item): item is { stationId: string; station: StationMap[string] } => Boolean(item.station))
+      .map(([stationId, facilities]) => ({ stationId, station: stations[stationId], facilities }))
+      .filter((item): item is { stationId: string; station: StationMap[string]; facilities: Record<string, true | { zh: string; en: string }> } => Boolean(item.station))
+      .filter(({ facilities }) => filter.every((clause) => clause.some((code) => code in facilities)))
       .map(({ stationId, station }) => ({ stationId, name: getLocalizedText(station, locale) }))
-  ), [matchedStationIds, locale]);
+  }, [filter, hasFilter, locale]);
   const filterStatusText = !hasFilter
     ? t(locale, 'accessibilityFilterInactive')
-    : matchedStationIds.length === 0
+    : matchedStations.length === 0
       ? t(locale, 'accessibilityFilterNoMatches')
       : locale === 'en'
-        ? `${matchedStationIds.length} stations match the accessibility filter`
+        ? `${matchedStations.length} stations match the accessibility filter`
         : locale === 'zh-Hans'
-          ? `${matchedStationIds.length} 个车站符合无障碍筛选`
-          : `${matchedStationIds.length} 個車站符合無障礙篩選`;
+          ? `${matchedStations.length} 个车站符合无障碍筛选`
+          : `${matchedStations.length} 個車站符合無障礙篩選`;
 
   return (
     <div className={`acc-filter-panel ${expanded ? 'expanded' : ''}`}>

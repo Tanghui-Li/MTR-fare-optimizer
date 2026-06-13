@@ -36,15 +36,16 @@ interface BusVehicle {
 
 interface BusLayerProps {
   locale: Locale;
+  mobileListOpen: boolean;
+  onMobileListOpenChange: (open: boolean) => void;
 }
 
-export default function BusLayer({ locale }: BusLayerProps) {
+export default function BusLayer({ locale, mobileListOpen, onMobileListOpenChange }: BusLayerProps) {
   const [vehicles, setVehicles] = useState<BusVehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<BusVehicle | null>(null);
-  const [mobileListOpen, setMobileListOpen] = useState(false);
   const mobileToggleRef = useRef<HTMLButtonElement>(null);
   const mobilePanelId = useId();
   const mobileTitleId = useId();
@@ -146,7 +147,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
   };
 
   const closeMobileList = () => {
-    setMobileListOpen(false);
+    onMobileListOpenChange(false);
     requestAnimationFrame(() => mobileToggleRef.current?.focus());
   };
 
@@ -314,7 +315,7 @@ export default function BusLayer({ locale }: BusLayerProps) {
           className="mobile-map-access-toggle"
           aria-expanded={mobileListOpen}
           aria-controls={mobilePanelId}
-          onClick={() => setMobileListOpen((open) => !open)}
+          onClick={() => onMobileListOpenChange(!mobileListOpen)}
         >
           {t(locale, 'liveBusAccessibleList')}
         </button>
