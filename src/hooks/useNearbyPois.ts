@@ -74,6 +74,11 @@ export function useNearbyPois(
       if (sort === 'distance') {
         return a.distanceM - b.distanceM || b.score - a.score;
       }
+      if (sort === 'rating') {
+        const ra = a.rating ?? -1;
+        const rb = b.rating ?? -1;
+        return rb - ra || (b.reviewsCount ?? 0) - (a.reviewsCount ?? 0) || b.score - a.score;
+      }
       return b.score - a.score || a.distanceM - b.distanceM;
     });
 

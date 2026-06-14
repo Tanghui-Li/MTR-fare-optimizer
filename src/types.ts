@@ -139,7 +139,26 @@ export interface Poi {
   website: string;
   phone: string;
   openingHours: string;
+  /** 真实评分（Google 地图,0-5）。来源:Apify Google Maps Scraper */
+  rating?: number;
+  /** 评论数 */
+  reviewsCount?: number;
+  /** 价位文字,如 "$$$" 或 "HK$150–350" */
+  price?: string;
+  /** 真实照片（本地路径，相对 BASE_URL）。来源：Wikidata P18 / 维基百科首图 / Wikimedia Commons */
+  image?: string;
+  /** 图片署名（作者 · 授权），满足 CC BY-SA 等署名要求 */
+  imageCredit?: string;
+  /** 图片来源页（Commons / 维基百科） */
+  imageSource?: string;
+  /** 缩略图原始宽高，用于占位以避免布局抖动 (CLS) */
+  imageW?: number;
+  imageH?: number;
+  /** 真实简介（维基百科摘要 / Wikidata 描述，按语言回退） */
+  description?: { en: string; zh: string };
+  /** 对应维基百科条目链接 */
+  wikipediaUrl?: string;
 }
 
 export type PoiCategory = 'all' | 'food' | 'attraction';
-export type PoiSort = 'recommend' | 'distance';
+export type PoiSort = 'recommend' | 'distance' | 'rating';

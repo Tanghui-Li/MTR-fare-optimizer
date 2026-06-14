@@ -1,7 +1,7 @@
-import { MapPin, Heart, Plus, Minus, Clock, Globe, Phone, Star, Footprints } from 'lucide-react';
+import { MapPin, Heart, Plus, Minus, Clock, Globe, Phone, Star, Footprints, BookOpen, Camera } from 'lucide-react';
 import { Locale, Poi } from '../types';
 import { getPoiVisual, getPoiVisualLabel } from '../data/cuisineMap';
-import { localizedPoiName, localizedPoiSecondary, recommendBars } from '../utils/poi';
+import { localizedPoiName, localizedPoiSecondary, localizedPoiDescription, recommendBars } from '../utils/poi';
 import { t } from '../i18n';
 import PoiThumb from './PoiThumb';
 
@@ -40,7 +40,9 @@ export default function PoiCard({
   const name = localizedPoiName(poi, locale);
   const secondary = localizedPoiSecondary(poi, locale);
   const bars = recommendBars(poi.score, poi.featured);
-  const intro = buildIntro(poi, label, locale);
+  const description = localizedPoiDescription(poi, locale);
+  const hasPhoto = Boolean(poi.image);
+  const intro = description || buildIntro(poi, label, locale);
 
   return (
     <article
@@ -75,16 +77,27 @@ export default function PoiCard({
               <Footprints className="poi-meta-icon" aria-hidden="true" />
               {poi.distanceM}m · {poi.walkMin}{t(locale, 'nearbyMinutes')}
             </span>
+            {poi.price && <span className="poi-price">{poi.price}</span>}
           </div>
-          <span
-            className="poi-rec"
-            role="img"
-            aria-label={`${t(locale, 'nearbyRecommendLabel')} ${bars}/5`}
-          >
-            {[0, 1, 2, 3, 4].map((i) => (
-              <span key={i} className={`poi-rec-bar${i < bars ? ' on' : ''}`} />
-            ))}
-          </span>
+          {poi.rating != null ? (
+            <span className="poi-rating" aria-label={`${t(locale, 'nearbySortRating')} ${poi.rating}`}>
+              <Star className="poi-rating-star" aria-hidden="true" />
+              <strong>{poi.rating}</strong>
+              {poi.reviewsCount != null && (
+                <span className="poi-rating-count">({poi.reviewsCount.toLocaleString()})</span>
+              )}
+            </span>
+          ) : (
+            <span
+              className="poi-rec"
+              role="img"
+              aria-label={`${t(locale, 'nearbyRecommendLabel')} ${bars}/5`}
+            >
+              {[0, 1, 2, 3, 4].map((i) => (
+                <span key={i} className={`poi-rec-bar${i < bars ? ' on' : ''}`} />
+              ))}
+            </span>
+          )}
         </div>
       </button>
 
@@ -101,11 +114,31 @@ export default function PoiCard({
 
       {expanded && (
         <div className="poi-card-detail">
-          <div className="poi-hero">
-            <PoiThumb poi={poi} size={132} rounded={14} fluid />
-            <span className="poi-hero-note">{t(locale, 'nearbyThumbNote')}</span>
+          <div className={`poi-hero${hasPhoto ? ' has-photo' : ''}`}>
+            <PoiThumb poi={poi} size={172} rounded={14} fluid showEmoji={!hasPhoto} />
+            {hasPhoto ? (
+              poi.imageSource ? (
+                <a
+                  className="poi-hero-credit"
+                  href={poi.imageSource}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={t(locale, 'nearbyPhotoSource')}
+                >
+                  <Camera className="poi-hero-credit-icon" aria-hidden="true" />
+                  {poi.imageCredit || 'Wikimedia Commons'}
+                </a>
+              ) : (
+                <span className="poi-hero-credit">
+                  <Camera className="poi-hero-credit-icon" aria-hidden="true" />
+                  {poi.imageCredit || 'Wikimedia Commons'}
+                </span>
+              )
+            ) : (
+              <span className="poi-hero-note">{t(locale, 'nearbyThumbNote')}</span>
+            )}
           </div>
-          <p className="poi-intro">{intro}</p>
+          <p className={`poi-intro${description ? ' real' : ''}`}>{intro}</p>
           {poi.openingHours && (
             <div className="poi-fact">
               <Clock className="poi-fact-icon" aria-hidden="true" />
@@ -138,9 +171,16 @@ export default function PoiCard({
                 {t(locale, 'nearbyPhone')}
               </a>
             )}
+            {poi.wikipediaUrl && (
+              <a className="poi-action" href={poi.wikipediaUrl} target="_blank" rel="noopener noreferrer">
+                <BookOpen className="poi-action-icon" aria-hidden="true" />
+                {t(locale, 'nearbyWiki')}
+              </a>
+            )}
           </div>
           <div className="poi-source">
-            {t(locale, 'nearbySource')}: OpenStreetMap
+            {t(locale, 'nearbySource')}: {poi.id.startsWith('g') ? 'Google Maps' : 'OpenStreetMap'}
+            {poi.wikipediaUrl ? ' · Wikipedia' : ''}
           </div>
         </div>
       )}

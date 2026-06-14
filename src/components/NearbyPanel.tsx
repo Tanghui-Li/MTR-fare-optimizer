@@ -138,7 +138,7 @@ export default function NearbyPanel(props: NearbyPanelProps) {
 
         <div className="nearby-row">
           <div className="nearby-sort" role="group" aria-label={t(locale, 'nearbySortRecommend')}>
-            {(['recommend', 'distance'] as PoiSort[]).map((s) => (
+            {(['recommend', 'distance', 'rating'] as PoiSort[]).map((s) => (
               <button
                 key={s}
                 type="button"
@@ -146,7 +146,11 @@ export default function NearbyPanel(props: NearbyPanelProps) {
                 aria-pressed={sort === s}
                 onClick={() => onSort(s)}
               >
-                {s === 'recommend' ? t(locale, 'nearbySortRecommend') : t(locale, 'nearbySortDistance')}
+                {s === 'recommend'
+                  ? t(locale, 'nearbySortRecommend')
+                  : s === 'distance'
+                    ? t(locale, 'nearbySortDistance')
+                    : t(locale, 'nearbySortRating')}
               </button>
             ))}
           </div>
