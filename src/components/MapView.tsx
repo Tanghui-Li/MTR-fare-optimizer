@@ -20,6 +20,7 @@ const NEARBY_STATION_IDS = new Set(
 import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
 import { useMapPolylines } from '../hooks/useMapPolylines';
+import { buildRouteStationLookup } from '../utils/mapRouteStations';
 import { t } from '../i18n';
 import { getLocalizedText, getSecondaryLocalizedText } from '../data/zhHansText';
 
@@ -128,6 +129,7 @@ export default function MapView({
 
   // Use decoupled hooks for polylines
   const { edgePolylines, routePolylines, exitReenterStations } = useMapPolylines(routeSegments);
+  const routeStationLookup = useMemo(() => buildRouteStationLookup(routeSegments), [routeSegments]);
 
   // Deduplicated station list for markers
   const stationMarkers = useMemo(() => {
@@ -180,6 +182,7 @@ export default function MapView({
     if (stationId === originId) return 'origin';
     if (stationId === destinationId) return 'destination';
     if (exitReenterStations.includes(stationId)) return 'exitReenter';
+    if (routeStationLookup.stationIds.has(stationId)) return 'route';
     return null;
   };
 
@@ -369,9 +372,17 @@ export default function MapView({
           let color = isInterchange ? '#374151' : lineColors[marker.primaryLine] || '#666';
           let fillColor = isInterchange ? '#ffffff' : lineColors[marker.primaryLine] || '#666';
           let fillOpacity = isInterchange ? 1 : 0.9;
+          let opacity = 1;
           let weight = isInterchange ? 2.5 : 2;
 
-          if (role === 'originDestination') {
+          if (routeStationLookup.isActive && !role) {
+            radius = 4;
+            color = '#94a3b8';
+            fillColor = '#e2e8f0';
+            fillOpacity = 0.12;
+            opacity = 0.28;
+            weight = 1;
+          } else if (role === 'originDestination') {
             radius = 12;
             color = '#0f172a';
             fillColor = '#facc15';
@@ -395,17 +406,26 @@ export default function MapView({
             fillColor = '#fb923c';
             fillOpacity = 1;
             weight = 3;
+          } else if (role === 'route') {
+            const routeLine = routeStationLookup.lineByStation.get(marker.id) || marker.primaryLine;
+            radius = 8;
+            color = lineColors[routeLine] || '#0f172a';
+            fillColor = '#ffffff';
+            fillOpacity = 1;
+            weight = 3;
           }
 
           // Accessibility filter highlighting
-          if (isAccHighlighted && !role) {
+          if (isAccHighlighted && !role && !routeStationLookup.isActive) {
             radius = 9;
             color = '#7c3aed';
             fillColor = '#a78bfa';
             fillOpacity = 1;
+            opacity = 1;
             weight = 3;
           } else if (isAccDimmed && !role) {
-            fillOpacity = 0.25;
+            fillOpacity = Math.min(fillOpacity, 0.25);
+            opacity = Math.min(opacity, 0.35);
           }
 
 
@@ -418,6 +438,7 @@ export default function MapView({
                 color,
                 fillColor,
                 fillOpacity,
+                opacity,
                 weight,
               }}
             >
@@ -456,10 +477,22 @@ export default function MapView({
           {showBuses && <BusLayer locale={locale} />}
 
           {/* MTR Bus Stop Locations */}
-          {showBusStops && <BusStopLayer locale={locale} />}
+          {showBusStops && (
+            <BusStopLayer
+              locale={locale}
+              routeStationIds={routeStationLookup.stationIds}
+              isRouteActive={routeStationLookup.isActive}
+            />
+          )}
 
           {/* LRT Station Markers (Static + Live Popup) */}
-          {showLRT && <LRTStationLayer locale={locale} />}
+          {showLRT && (
+            <LRTStationLayer
+              locale={locale}
+              routeStationIds={routeStationLookup.stationIds}
+              isRouteActive={routeStationLookup.isActive}
+            />
+          )}
         </Suspense>
 
         {/* Nearby Explore POI Layer */}
