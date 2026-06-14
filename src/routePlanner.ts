@@ -1,4 +1,4 @@
-import { FareMatrix, DetailedSegment, PathStep, RouteResult, TicketType, TransportMode, GraphEdge } from './types';
+import { FareMatrix, DetailedSegment, PathStep, RouteResult, TicketType, TransportMode, GraphEdge, RouteOptimizationGoal, RoutePlanningPreferences } from './types';
 import {
   getNodeCoordinates,
   getNodeLabel,
@@ -102,6 +102,7 @@ export function findMultimodalRoute(
   destinationId: string,
   ticketType: TicketType,
   mode: 'optimized' | 'boring',
+  preferences?: Pick<RoutePlanningPreferences, 'goal' | 'maxGateChanges'>,
 ): RouteResult {
   const isAELTrip = ['47', '56'].includes(originId) || ['47', '56'].includes(destinationId);
   const directFare = fareMatrix[originId]?.[destinationId];
@@ -123,12 +124,68 @@ export function findMultimodalRoute(
   }
 
   const graph = buildGraph(ticketType, isAELTrip, fareMatrix);
-  const result = dijkstra(graph, originId, destinationId, mode === 'boring');
+  const goal = preferences?.goal || 'fare';
+  const result = dijkstra(graph, originId, destinationId, {
+    boringMode: mode === 'boring',
+    maxGateChanges: preferences?.maxGateChanges ?? null,
+    scoreEdge: getScoreEdge(goal),
+  });
 
   return {
     totalFare: result.totalFare,
     route: result.route,
     segments: buildDetailedSegments(result.route, result.edges),
+  };
+}
+
+export function findRouteCandidateSet(
+  fareMatrix: FareMatrix,
+  originId: string,
+  destinationId: string,
+  ticketType: TicketType,
+  preferences: RoutePlanningPreferences,
+): {
+  lowestFare: RouteResult;
+  regular: RouteResult;
+  fastest: RouteResult;
+  balanced: RouteResult;
+} {
+  const gateOptions = { maxGateChanges: preferences.maxGateChanges };
+  return {
+    lowestFare: findMultimodalRoute(fareMatrix, originId, destinationId, ticketType, 'optimized', {
+      ...gateOptions,
+      goal: 'fare',
+    }),
+    regular: findMultimodalRoute(fareMatrix, originId, destinationId, ticketType, 'boring', {
+      ...gateOptions,
+      goal: 'time',
+    }),
+    fastest: findMultimodalRoute(fareMatrix, originId, destinationId, ticketType, 'optimized', {
+      ...gateOptions,
+      goal: 'time',
+    }),
+    balanced: findMultimodalRoute(fareMatrix, originId, destinationId, ticketType, 'optimized', {
+      ...gateOptions,
+      goal: 'balanced',
+    }),
+  };
+}
+
+function getScoreEdge(goal: RouteOptimizationGoal) {
+  return (edge: GraphEdge) => {
+    const minutes = edge.estimatedMinutes ?? 0;
+    const gatePenalty = edge.fare > 0 ? 1.4 : 0;
+    const transferPenalty = edge.mode === 'TRANSFER' ? 3 : 0;
+
+    if (goal === 'time') {
+      return minutes + edge.fare * 0.16 + gatePenalty + transferPenalty;
+    }
+
+    if (goal === 'balanced') {
+      return edge.fare * 0.7 + minutes * 0.65 + gatePenalty * 2 + transferPenalty;
+    }
+
+    return edge.fare + minutes * 0.03 + gatePenalty * 0.2 + transferPenalty * 0.1;
   };
 }
 
