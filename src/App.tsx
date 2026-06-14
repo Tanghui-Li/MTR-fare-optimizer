@@ -6,11 +6,15 @@ import AccessibilityFilter from './components/AccessibilityFilter'
 import { findMultimodalRoute } from './routePlanner'
 import { unifiedStationMap } from './data/unifiedNetwork'
 import { getFareMatrix } from './data/mtrFareMatrix'
-import { RouteResult, StationMap, TicketType, DetailedSegment, Locale } from './types'
+import { RouteResult, StationMap, TicketType, DetailedSegment, Locale, Poi, PoiCategory, PoiSort } from './types'
 import { formatCurrency, localeOptions, t } from './i18n'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, Compass } from 'lucide-react'
 import { useMobileSheetDrag } from './hooks/useMobileSheetDrag'
-import { getLocalizedText } from './data/zhHansText'
+import { getLocalizedText, getSecondaryLocalizedText } from './data/zhHansText'
+import NearbyPanel from './components/NearbyPanel'
+import { useNearbyPois, stationHasPois } from './hooks/useNearbyPois'
+import { haversineMeters, walkMinutes } from './utils/geo'
+import { stationCoordinates } from './data/stationCoordinates'
 
 const stations = unifiedStationMap as StationMap
 type RouteMode = 'optimized' | 'boring';
@@ -141,9 +145,135 @@ function App() {
   const [showBuses, setShowBuses] = useState(() => !isMobileViewport());
   const [showBusStops, setShowBusStops] = useState(() => !isMobileViewport());
   const [showLRT, setShowLRT] = useState(true);
+  const [showNearbyStations, setShowNearbyStations] = useState(true);
   const [mobileLayerControlsOpen, setMobileLayerControlsOpen] = useState(false);
   const [accessibilityFilter, setAccessibilityFilter] = useState<string[][]>([]);
-  
+
+  // ===== Nearby Explore（周边探索）state =====
+  const [nearbyStationId, setNearbyStationId] = useState<string | null>(null);
+  const [poiCategory, setPoiCategory] = useState<PoiCategory>('all');
+  const [poiCuisine, setPoiCuisine] = useState<string | null>(null);
+  const [poiRadius, setPoiRadius] = useState(500);
+  const [poiSort, setPoiSort] = useState<PoiSort>('recommend');
+  const [expandedPoiId, setExpandedPoiId] = useState<string | null>(null);
+  const [activePoiId, setActivePoiId] = useState<string | null>(null);
+  const [flyNonce, setFlyNonce] = useState(0);
+  const [poiTour, setPoiTour] = useState<string[]>([]);
+  const [poiFavorites, setPoiFavorites] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('mtr.poi.favorites');
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mtr.poi.favorites', JSON.stringify([...poiFavorites]));
+    } catch {
+      /* localStorage 不可用时静默忽略 */
+    }
+  }, [poiFavorites]);
+
+  const nearbyResult = useNearbyPois(nearbyStationId, {
+    category: poiCategory,
+    cuisine: poiCuisine,
+    radius: poiRadius,
+    sort: poiSort,
+  });
+
+  const tourPois = useMemo<Poi[]>(() => {
+    if (!nearbyStationId || poiTour.length === 0) return [];
+    const byId = new Map(nearbyResult.all.map((p) => [p.id, p]));
+    const picked = poiTour
+      .map((id) => byId.get(id))
+      .filter((p): p is Poi => Boolean(p));
+    const center = stationCoordinates[nearbyStationId];
+    if (!center) return picked;
+    // 从车站出发的最近邻排序，生成步行串游顺序
+    const remaining = [...picked];
+    const ordered: Poi[] = [];
+    let curLat = center.lat;
+    let curLng = center.lng;
+    while (remaining.length > 0) {
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < remaining.length; i += 1) {
+        const d = haversineMeters(curLat, curLng, remaining[i].lat, remaining[i].lng);
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      const next = remaining.splice(best, 1)[0];
+      ordered.push(next);
+      curLat = next.lat;
+      curLng = next.lng;
+    }
+    return ordered;
+  }, [nearbyStationId, poiTour, nearbyResult.all]);
+
+  const tourTotalMin = useMemo(() => {
+    if (!nearbyStationId || tourPois.length === 0) return 0;
+    const center = stationCoordinates[nearbyStationId];
+    if (!center) return 0;
+    let total = 0;
+    let lat = center.lat;
+    let lng = center.lng;
+    for (const p of tourPois) {
+      total += haversineMeters(lat, lng, p.lat, p.lng);
+      lat = p.lat;
+      lng = p.lng;
+    }
+    return walkMinutes(total);
+  }, [nearbyStationId, tourPois]);
+
+  const handleOpenNearby = (stationId: string) => {
+    setNearbyStationId(stationId);
+    setPoiCategory('all');
+    setPoiCuisine(null);
+    setPoiSort('recommend');
+    setExpandedPoiId(null);
+    setActivePoiId(null);
+    setPoiTour([]);
+  };
+  const handleCloseNearby = () => {
+    setNearbyStationId(null);
+    setActivePoiId(null);
+    setExpandedPoiId(null);
+  };
+  const handleToggleExpand = (id: string) => {
+    setExpandedPoiId((prev) => (prev === id ? null : id));
+    setActivePoiId(id);
+    setFlyNonce((n) => n + 1);
+  };
+  const handleSelectPoi = (id: string) => {
+    setActivePoiId(id);
+    setExpandedPoiId(id);
+  };
+  const handleLocatePoi = (poi: Poi) => {
+    setActivePoiId(poi.id);
+    setExpandedPoiId(poi.id);
+    setFlyNonce((n) => n + 1);
+  };
+  const handleToggleFavorite = (id: string) => {
+    setPoiFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const handleToggleTour = (id: string) => {
+    setPoiTour((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const handleShufflePoi = (list: Poi[]) => {
+    if (list.length === 0) return;
+    const pick = list[Math.floor(Math.random() * list.length)];
+    handleLocatePoi(pick);
+  };
+
   const [displayedRouteInfo, setDisplayedRouteInfo] = useState({
     originId: null as string | null,
     destinationId: null as string | null,
@@ -381,6 +511,23 @@ function App() {
                 locale={locale}
               />
             )}
+
+            {displayedRouteInfo.destinationId && stationHasPois(displayedRouteInfo.destinationId) && (
+              <button
+                type="button"
+                className="nearby-cta"
+                onClick={() => handleOpenNearby(displayedRouteInfo.destinationId as string)}
+              >
+                <span className="nearby-cta-icon" aria-hidden="true">
+                  <Compass className="w-4 h-4" />
+                </span>
+                <span className="nearby-cta-text">
+                  <strong>{t(locale, 'nearbyDestinationCta')}</strong>
+                  <span>{getLocalizedText(stations[displayedRouteInfo.destinationId], locale)}</span>
+                </span>
+                <span className="nearby-cta-arrow" aria-hidden="true">→</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -399,7 +546,46 @@ function App() {
             setShowLRT={setShowLRT}
             mobileLayerControlsOpen={mobileLayerControlsOpen}
             accessibilityFilter={accessibilityFilter}
+            showNearbyStations={showNearbyStations}
+            setShowNearbyStations={setShowNearbyStations}
+            onOpenNearby={handleOpenNearby}
+            nearbyStationId={nearbyStationId}
+            nearbyPois={nearbyResult.filtered}
+            nearbyRadius={poiRadius}
+            activePoiId={activePoiId}
+            flyNonce={flyNonce}
+            tourPois={tourPois}
+            onSelectPoi={handleSelectPoi}
           />
+          {nearbyStationId && stations[nearbyStationId] && (
+            <NearbyPanel
+              open={Boolean(nearbyStationId)}
+              stationName={getLocalizedText(stations[nearbyStationId], locale)}
+              stationSecondary={getSecondaryLocalizedText(stations[nearbyStationId], locale)}
+              locale={locale}
+              result={nearbyResult}
+              category={poiCategory}
+              cuisine={poiCuisine}
+              radius={poiRadius}
+              sort={poiSort}
+              expandedPoiId={expandedPoiId}
+              activePoiId={activePoiId}
+              favorites={poiFavorites}
+              tourPois={tourPois}
+              tourTotalMin={tourTotalMin}
+              onCategory={setPoiCategory}
+              onCuisine={setPoiCuisine}
+              onRadius={setPoiRadius}
+              onSort={setPoiSort}
+              onToggleExpand={handleToggleExpand}
+              onLocate={handleLocatePoi}
+              onToggleFavorite={handleToggleFavorite}
+              onToggleTour={handleToggleTour}
+              onClearTour={() => setPoiTour([])}
+              onShuffle={handleShufflePoi}
+              onClose={handleCloseNearby}
+            />
+          )}
           <div className="global-map-attribution">
             Leaflet | {t(locale, 'mapFromLabel')} <a href="https://www.landsd.gov.hk/" target="_blank" rel="noopener noreferrer">{t(locale, 'landsDepartment')}</a> | {t(locale, 'dataSourcesLabel')} <a href="https://data.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'dataGovHongKong')}</a>, <a href="https://geodata.gov.hk" target="_blank" rel="noopener noreferrer">{t(locale, 'geospatialDataPlatform')}</a>, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>
           </div>
