@@ -6,12 +6,23 @@ import AccessibilityFilter from './components/AccessibilityFilter'
 import { findRouteCandidateSet } from './routePlanner'
 import { unifiedStationMap } from './data/unifiedNetwork'
 import { getFareMatrix } from './data/mtrFareMatrix'
-import { AccessibilityRouteMode, RouteInsight, RouteOptimizationGoal, RoutePlanningPreferences, RouteResult, StationMap, TicketType, DetailedSegment, Locale } from './types'
-import { RouteResult, StationMap, TicketType, DetailedSegment, Locale, Poi, PoiCategory, PoiSort } from './types'
+import {
+  AccessibilityRouteMode,
+  RouteInsight,
+  RouteOptimizationGoal,
+  RoutePlanningPreferences,
+  RouteResult,
+  StationMap,
+  TicketType,
+  DetailedSegment,
+  Locale,
+  Poi,
+  PoiCategory,
+  PoiSort,
+} from './types'
 import { formatCurrency, localeOptions, t } from './i18n'
 import { SlidersHorizontal, Compass } from 'lucide-react'
 import { useMobileSheetDrag } from './hooks/useMobileSheetDrag'
-import { getLocalizedText } from './data/zhHansText'
 import { selectRecommendedRoute } from './utils/routeInsights'
 import { getLocalizedText, getSecondaryLocalizedText } from './data/zhHansText'
 import NearbyPanel from './components/NearbyPanel'
