@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useId } from 'react'
-import { TicketType } from '../types'
-import { Search, CreditCard, Ticket, ChevronDown, ArrowRightLeft, X } from 'lucide-react'
+import { AccessibilityRouteMode, Locale, RouteOptimizationGoal, TicketType } from '../types'
+import { Accessibility, Clock, CreditCard, Gauge, LogOut, Search, Ticket, ChevronDown, ArrowRightLeft, X } from 'lucide-react'
 import { getLineFilterOptions, getSelectableStations, getLocalizedLineDefinitionLabel } from '../data/unifiedNetwork'
-import { Locale } from '../types'
 import { t } from '../i18n'
 import { getLocalizedText } from '../data/zhHansText'
 
@@ -231,9 +230,17 @@ interface ControlPanelProps {
   originId: string | null
   destinationId: string | null
   ticketType: TicketType
+  goal: RouteOptimizationGoal
+  accessibilityMode: AccessibilityRouteMode
+  maxGateChanges: number | null
+  minSavings: number
   onOriginChange: (id: string) => void
   onDestinationChange: (id: string) => void
   onTicketTypeChange: (type: TicketType) => void
+  onGoalChange: (goal: RouteOptimizationGoal) => void
+  onAccessibilityModeChange: (mode: AccessibilityRouteMode) => void
+  onMaxGateChangesChange: (value: number | null) => void
+  onMinSavingsChange: (value: number) => void
   onClearRoute: () => void
   onPlanRoute: () => void
   canPlanRoute: boolean
@@ -246,9 +253,17 @@ const ControlPanel = ({
   originId,
   destinationId,
   ticketType,
+  goal,
+  accessibilityMode,
+  maxGateChanges,
+  minSavings,
   onOriginChange,
   onDestinationChange,
   onTicketTypeChange,
+  onGoalChange,
+  onAccessibilityModeChange,
+  onMaxGateChangesChange,
+  onMinSavingsChange,
   onClearRoute,
   onPlanRoute,
   canPlanRoute,
@@ -261,6 +276,7 @@ const ControlPanel = ({
   const originLineId = useId()
   const destLineId = useId()
   const ticketTypeName = useId()
+  const goalName = useId()
 
   const lineOptions = [{ code: 'ALL', zh: '所有路線', zhHans: '所有线路', en: 'All Routes', category: 'MTR' as const }, ...getLineFilterOptions()]
   const getFilteredStations = (lineCode: string) => {
@@ -281,6 +297,47 @@ const ControlPanel = ({
   const destStations = getFilteredStations(destLine)
   const hasRouteDraft = Boolean(originId || destinationId || originLine !== 'ALL' || destLine !== 'ALL')
   const shouldShowPlanAction = !hasAppliedRoute || hasUnappliedChanges
+  const preferenceCopy = {
+    en: {
+      title: 'Smart Route Preferences',
+      fare: 'Lowest fare',
+      balanced: 'Balanced',
+      time: 'Faster',
+      accessibility: 'Accessibility',
+      accessibilityOff: 'Off',
+      accessibilityPrefer: 'Prefer',
+      accessibilityRequire: 'Require',
+      maxGate: 'Max gate changes',
+      anyGate: 'Any',
+      minSavings: 'Minimum savings',
+    },
+    'zh-Hans': {
+      title: '智能路线偏好',
+      fare: '最低票价',
+      balanced: '均衡',
+      time: '更快',
+      accessibility: '无障碍',
+      accessibilityOff: '关闭',
+      accessibilityPrefer: '优先',
+      accessibilityRequire: '必须',
+      maxGate: '最多出闸',
+      anyGate: '不限',
+      minSavings: '最少节省',
+    },
+    'zh-Hant': {
+      title: '智能路線偏好',
+      fare: '最低票價',
+      balanced: '均衡',
+      time: '更快',
+      accessibility: '無障礙',
+      accessibilityOff: '關閉',
+      accessibilityPrefer: '優先',
+      accessibilityRequire: '必須',
+      maxGate: '最多出閘',
+      anyGate: '不限',
+      minSavings: '最少節省',
+    },
+  }[locale]
 
   const handleClearRoute = () => {
     setOriginLine('ALL')
@@ -360,6 +417,101 @@ const ControlPanel = ({
           </label>
         </fieldset>
       </div>
+
+      <section className="route-preferences-panel" aria-label={preferenceCopy.title}>
+        <div className="route-preferences-header">
+          <Gauge className="w-4 h-4" aria-hidden="true" />
+          <h3>{preferenceCopy.title}</h3>
+        </div>
+
+        <fieldset className="route-strategy-toggle">
+          <legend className="sr-only">{preferenceCopy.title}</legend>
+          <label className={`route-strategy-option ${goal === 'fare' ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name={goalName}
+              value="fare"
+              checked={goal === 'fare'}
+              onChange={() => onGoalChange('fare')}
+              className="segmented-radio-input"
+            />
+            <CreditCard className="w-4 h-4" aria-hidden="true" />
+            <span>{preferenceCopy.fare}</span>
+          </label>
+          <label className={`route-strategy-option ${goal === 'balanced' ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name={goalName}
+              value="balanced"
+              checked={goal === 'balanced'}
+              onChange={() => onGoalChange('balanced')}
+              className="segmented-radio-input"
+            />
+            <Gauge className="w-4 h-4" aria-hidden="true" />
+            <span>{preferenceCopy.balanced}</span>
+          </label>
+          <label className={`route-strategy-option ${goal === 'time' ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name={goalName}
+              value="time"
+              checked={goal === 'time'}
+              onChange={() => onGoalChange('time')}
+              className="segmented-radio-input"
+            />
+            <Clock className="w-4 h-4" aria-hidden="true" />
+            <span>{preferenceCopy.time}</span>
+          </label>
+        </fieldset>
+
+        <div className="route-constraint-grid">
+          <label className="route-preference-field">
+            <span>
+              <Accessibility className="w-3.5 h-3.5" aria-hidden="true" />
+              {preferenceCopy.accessibility}
+            </span>
+            <select
+              value={accessibilityMode}
+              onChange={(event) => onAccessibilityModeChange(event.target.value as AccessibilityRouteMode)}
+            >
+              <option value="off">{preferenceCopy.accessibilityOff}</option>
+              <option value="prefer">{preferenceCopy.accessibilityPrefer}</option>
+              <option value="require">{preferenceCopy.accessibilityRequire}</option>
+            </select>
+          </label>
+
+          <label className="route-preference-field">
+            <span>
+              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+              {preferenceCopy.maxGate}
+            </span>
+            <select
+              value={maxGateChanges === null ? 'any' : String(maxGateChanges)}
+              onChange={(event) => onMaxGateChangesChange(event.target.value === 'any' ? null : Number(event.target.value))}
+            >
+              <option value="any">{preferenceCopy.anyGate}</option>
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </label>
+
+          <label className="route-preference-field route-preference-field-wide">
+            <span>
+              <CreditCard className="w-3.5 h-3.5" aria-hidden="true" />
+              {preferenceCopy.minSavings}
+            </span>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={minSavings}
+              onChange={(event) => onMinSavingsChange(Math.max(0, Number(event.target.value) || 0))}
+            />
+          </label>
+        </div>
+      </section>
 
       <div className="route-form-grid grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 relative">
         {/* Origin Section */}

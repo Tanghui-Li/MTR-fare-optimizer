@@ -298,9 +298,20 @@ function isAelMtrConnection(from: string, to: string): boolean {
   );
 }
 
+function estimateEdgeMinutes(edge: Omit<GraphEdge, 'estimatedMinutes'>): number {
+  if (edge.mode === 'TRANSFER') return 5;
+  if (edge.mode === 'AEL') return 8;
+  if (edge.mode === 'LRT') return 7;
+  if (edge.mode === 'NWBUS' || edge.mode === 'TAIPOBUS') return 10;
+  return 6;
+}
+
 function addEdge(graph: Map<string, GraphEdge[]>, edge: GraphEdge) {
   if (!graph.has(edge.from)) graph.set(edge.from, []);
-  graph.get(edge.from)!.push(edge);
+  graph.get(edge.from)!.push({
+    ...edge,
+    estimatedMinutes: edge.estimatedMinutes ?? estimateEdgeMinutes(edge),
+  });
 }
 
 function addUndirectedEdge(graph: Map<string, GraphEdge[]>, from: string, to: string, fare: number, mode: TransportMode, lineCode: string) {

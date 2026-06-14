@@ -1,9 +1,10 @@
 import { useId } from 'react'
-import { RouteResult, StationMap, TicketType, DetailedSegment, Locale } from '../types'
+import { RouteInsight, RouteResult, StationMap, TicketType, DetailedSegment, Locale } from '../types'
 import FragmentedRouteCard from './FragmentedRouteCard'
 import DirectRouteCard from './DirectRouteCard'
-import { TrendingDown } from 'lucide-react'
+import { Accessibility, Clock, Gauge, LogOut, TrendingDown } from 'lucide-react'
 import { formatCurrency, t } from '../i18n'
+import { getReasonText, getTradeoffText, estimateRouteMinutes } from '../utils/routeInsights'
 
 type RouteMode = 'optimized' | 'boring';
 
@@ -16,6 +17,7 @@ interface RouteVisualizerProps {
   onRouteModeChange: (mode: RouteMode) => void
   optimizedSegments: DetailedSegment[]
   boringSegments: DetailedSegment[]
+  routeInsight: RouteInsight | null
   locale: Locale
 }
 
@@ -28,15 +30,84 @@ const RouteVisualizer = ({
   onRouteModeChange,
   optimizedSegments,
   boringSegments,
+  routeInsight,
   locale,
 }: RouteVisualizerProps) => {
-  const savings = directFare - routeResult.totalFare
+  const recommendedFare = routeInsight?.metrics.fare ?? routeResult.totalFare
+  const lowestFare = routeInsight?.alternatives.lowestFare?.fare ?? Math.min(recommendedFare, directFare)
+  const regularFare = routeInsight?.alternatives.regular?.fare ?? directFare
+  const savings = regularFare - recommendedFare
   const hasSavings = savings > 0.01 // Floating point safety
   const gateChanges = Math.max(optimizedSegments.length - 1, 0)
+  const regularMinutes = routeInsight?.alternatives.regular?.estimatedMinutes ?? estimateRouteMinutes(boringSegments)
+  const recommendedMinutes = routeInsight?.metrics.estimatedMinutes ?? estimateRouteMinutes(optimizedSegments)
+  const accessibilityPercent = routeInsight
+    ? Math.round(routeInsight.metrics.accessibilityScore * 100)
+    : 100
   const routeModeName = useId()
+  const insightCopy = {
+    en: {
+      title: 'Smart recommendation',
+      recommended: 'Recommended',
+      regular: 'Regular',
+      minutes: 'min',
+      estimatedTime: 'Estimated time',
+      accessibility: 'Accessibility match',
+    },
+    'zh-Hans': {
+      title: '智能推荐',
+      recommended: '推荐路线',
+      regular: '常规路线',
+      minutes: '分钟',
+      estimatedTime: '预计耗时',
+      accessibility: '无障碍匹配',
+    },
+    'zh-Hant': {
+      title: '智能推薦',
+      recommended: '推薦路線',
+      regular: '常規路線',
+      minutes: '分鐘',
+      estimatedTime: '預計耗時',
+      accessibility: '無障礙匹配',
+    },
+  }[locale]
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {routeInsight && (
+        <section className="route-insight-panel" aria-label={insightCopy.title}>
+          <div className="route-insight-header">
+            <Gauge className="w-4 h-4" aria-hidden="true" />
+            <h3>{insightCopy.title}</h3>
+          </div>
+          <p className="route-insight-reason">{getReasonText(locale, routeInsight.selectedReason)}</p>
+          <div className="route-insight-metrics">
+            <div>
+              <Clock className="w-4 h-4" aria-hidden="true" />
+              <span>{insightCopy.estimatedTime}</span>
+              <strong>{recommendedMinutes} {insightCopy.minutes}</strong>
+            </div>
+            <div>
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+              <span>{t(locale, 'routeComparisonGateChanges')}</span>
+              <strong>{routeInsight.metrics.gateChanges}</strong>
+            </div>
+            <div>
+              <Accessibility className="w-4 h-4" aria-hidden="true" />
+              <span>{insightCopy.accessibility}</span>
+              <strong>{accessibilityPercent}%</strong>
+            </div>
+          </div>
+          {routeInsight.tradeoffNotes.length > 0 && (
+            <ul className="route-insight-notes">
+              {routeInsight.tradeoffNotes.map((note) => (
+                <li key={note}>{getTradeoffText(locale, note)}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       {!hasSavings ? (
         <div className="no-savings-banner">
           <div className="no-savings-icon">✅</div>
@@ -117,12 +188,16 @@ const RouteVisualizer = ({
         </div>
         <dl className="route-comparison-grid">
           <div>
-            <dt>{t(locale, 'routeComparisonOptimized')}</dt>
-            <dd>{formatCurrency(routeResult.totalFare)}</dd>
+            <dt>{t(locale, 'routeComparisonLowest')}</dt>
+            <dd>{formatCurrency(lowestFare)}</dd>
+          </div>
+          <div className="route-comparison-recommended">
+            <dt>{t(locale, 'routeComparisonRecommended')}</dt>
+            <dd>{formatCurrency(recommendedFare)}</dd>
           </div>
           <div>
             <dt>{t(locale, 'routeComparisonRegular')}</dt>
-            <dd>{formatCurrency(directFare)}</dd>
+            <dd>{formatCurrency(regularFare)}</dd>
           </div>
           <div>
             <dt>{t(locale, 'routeComparisonSavings')}</dt>
@@ -131,6 +206,14 @@ const RouteVisualizer = ({
           <div>
             <dt>{t(locale, 'routeComparisonGateChanges')}</dt>
             <dd>{gateChanges}</dd>
+          </div>
+          <div>
+            <dt>{insightCopy.recommended} {insightCopy.estimatedTime}</dt>
+            <dd>{recommendedMinutes} {insightCopy.minutes}</dd>
+          </div>
+          <div>
+            <dt>{insightCopy.regular} {insightCopy.estimatedTime}</dt>
+            <dd>{regularMinutes} {insightCopy.minutes}</dd>
           </div>
         </dl>
       </section>
