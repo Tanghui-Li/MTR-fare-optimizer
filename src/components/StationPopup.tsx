@@ -2,11 +2,16 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { fetchNextTrain, NextTrainEntry, stationCodeToId, stationIdToCode } from '../services/mtrApi';
 import { lineColors, getLocalizedLineName, getLineTextColor } from '../data/lineColors';
-import { StationMetadata, Locale, StationMap } from '../types';
+import { StationMetadata, Locale, StationMap, Poi } from '../types';
 import accessibilityRaw from '../data/accessibilityData.json';
 import { t } from '../i18n';
 import stationsData from '../data/stations.json';
+import poisData from '../data/pois.json';
 import { getLocalizedText, getSecondaryLocalizedText } from '../data/zhHansText';
+import { getPoiVisual } from '../data/cuisineMap';
+import { localizedPoiName } from '../utils/poi';
+
+const POIS = poisData as unknown as Record<string, Poi[]>;
 
 const accessibilityData = accessibilityRaw as {
   facilities: Record<string, Record<string, true | { zh: string; en: string }>>;
@@ -28,6 +33,7 @@ interface StationPopupProps {
   station: StationMetadata;
   lines: string[];
   locale: Locale;
+  onOpenNearby: (stationId: string) => void;
 }
 
 interface StationDetailsProps extends StationPopupProps {
@@ -40,7 +46,9 @@ interface TrainDirection {
   trains: NextTrainEntry[];
 }
 
-export function StationDetails({ stationId, station, lines, locale, isActive }: StationDetailsProps) {
+export function StationDetails({ stationId, station, lines, locale, isActive, onOpenNearby }: StationDetailsProps) {
+  const nearbyPois = POIS[stationId] || [];
+  const nearbyTop = nearbyPois.slice(0, 3);
   const [trainData, setTrainData] = useState<TrainDirection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -252,6 +260,36 @@ export function StationDetails({ stationId, station, lines, locale, isActive }: 
           )}
         </div>
 
+        {nearbyPois.length > 0 && (
+          <div className="popup-nearby">
+            <div className="popup-nearby-head">
+              <span className="popup-nearby-title">
+                🧭 {t(locale, 'nearbyNearStation')}
+              </span>
+              <span className="popup-nearby-count">{nearbyPois.length}</span>
+            </div>
+            <div className="popup-nearby-list">
+              {nearbyTop.map((p) => {
+                const v = getPoiVisual(p.type, p.cuisineKey, p.kind);
+                return (
+                  <div key={p.id} className="popup-nearby-item">
+                    <span className="popup-nearby-emoji" aria-hidden="true">{v.emoji}</span>
+                    <span className="popup-nearby-name">{localizedPoiName(p, locale)}</span>
+                    <span className="popup-nearby-dist">{p.distanceM}m</span>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className="popup-nearby-btn"
+              onClick={() => onOpenNearby(stationId)}
+            >
+              {t(locale, 'nearbyViewAll')} {nearbyPois.length} →
+            </button>
+          </div>
+        )}
+
         {hasAccessibility && (
           <div className="popup-accessibility">
             <div className="popup-accessibility-title" style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: '#374151', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
@@ -308,7 +346,7 @@ export function StationDetails({ stationId, station, lines, locale, isActive }: 
   );
 }
 
-export default function StationPopup({ stationId, station, lines, locale }: StationPopupProps) {
+export default function StationPopup({ stationId, station, lines, locale, onOpenNearby }: StationPopupProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -327,6 +365,7 @@ export default function StationPopup({ stationId, station, lines, locale }: Stat
         lines={lines}
         locale={locale}
         isActive={isOpen}
+        onOpenNearby={onOpenNearby}
       />
     </Popup>
   );

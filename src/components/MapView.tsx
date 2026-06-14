@@ -7,8 +7,16 @@ import { lineColors, getLocalizedLineName } from '../data/lineColors';
 import { getStationLines } from '../services/mtrApi';
 import linesData from '../data/lines.json';
 import stationsData from '../data/stations.json';
-import { StationMap, DetailedSegment, Locale } from '../types';
+import { StationMap, DetailedSegment, Locale, Poi } from '../types';
 import StationPopup from './StationPopup';
+import PoiLayer from './PoiLayer';
+import poisData from '../data/pois.json';
+
+const NEARBY_STATION_IDS = new Set(
+  Object.entries(poisData as Record<string, unknown[]>)
+    .filter(([, list]) => Array.isArray(list) && list.length > 0)
+    .map(([id]) => id),
+);
 import accessibilityRaw from '../data/accessibilityData.json';
 import { getRouteNodeCoordinate } from '../routePlanner';
 import { useMapPolylines } from '../hooks/useMapPolylines';
@@ -39,6 +47,17 @@ interface MapViewProps {
   setShowLRT: (v: boolean) => void;
   mobileLayerControlsOpen: boolean;
   accessibilityFilter: string[][];
+  // ===== Nearby Explore =====
+  showNearbyStations: boolean;
+  setShowNearbyStations: (v: boolean) => void;
+  onOpenNearby: (stationId: string) => void;
+  nearbyStationId: string | null;
+  nearbyPois: Poi[];
+  nearbyRadius: number;
+  activePoiId: string | null;
+  flyNonce: number;
+  tourPois: Poi[];
+  onSelectPoi: (id: string) => void;
 }
 
 /** Sub-component that handles fitBounds when route changes */
@@ -95,10 +114,12 @@ function ResizeHandler() {
   return null;
 }
 
-export default function MapView({ 
+export default function MapView({
   routeSegments, originId, destinationId, locale,
   showBuses, showBusStops, showLRT, setShowBuses, setShowBusStops, setShowLRT, mobileLayerControlsOpen,
-  accessibilityFilter
+  accessibilityFilter,
+  showNearbyStations, setShowNearbyStations,
+  onOpenNearby, nearbyStationId, nearbyPois, nearbyRadius, activePoiId, flyNonce, tourPois, onSelectPoi,
 }: MapViewProps) {
   const mapDescriptionId = useId();
 
@@ -212,8 +233,28 @@ export default function MapView({
               <span className="map-toggle-status">{showBuses ? t(locale, 'enabled') : t(locale, 'disabled')}</span>
             </span>
           </label>
+          <label className="map-toggle">
+            <input
+              type="checkbox"
+              checked={showNearbyStations}
+              aria-label={t(locale, 'nearbyLayerToggle')}
+              onChange={(e) => setShowNearbyStations(e.target.checked)}
+            />
+            <span className="map-toggle-slider" />
+            <span className="map-toggle-label">
+              <span className="nearby-icon-dot" aria-hidden="true" />
+              {t(locale, 'nearbyLayerToggle')}
+              <span className="map-toggle-status">{showNearbyStations ? t(locale, 'enabled') : t(locale, 'disabled')}</span>
+            </span>
+          </label>
         </div>
         <div className="map-legend" aria-label={t(locale, 'mapLegendTitle')}>
+          {showNearbyStations && (
+            <span className="legend-item">
+              <span className="legend-dot" style={{ backgroundColor: '#fb7185' }} aria-hidden="true" />
+              <span className="legend-text">🍽 {t(locale, 'nearbyLayerToggle')}</span>
+            </span>
+          )}
           {Object.entries(lineColors).map(([code, color]) => (
             <span key={code} className="legend-item">
               <span className="legend-dot" style={{ backgroundColor: color }} aria-hidden="true" />
@@ -290,6 +331,27 @@ export default function MapView({
           />
         ))}
 
+        {/* Nearby Explore: soft halo BEHIND stations that have nearby data
+            (additive ring — keeps each station's line color, never overrides it) */}
+        {showNearbyStations && highlightedStationIds === null && stationMarkers
+          .filter((m) => NEARBY_STATION_IDS.has(m.id))
+          .map((m) => (
+            <CircleMarker
+              key={`nearby-halo-${m.id}`}
+              center={[m.lat, m.lng]}
+              radius={12}
+              interactive={false}
+              pathOptions={{
+                className: 'poi-station-halo',
+                color: '#fb7185',
+                weight: 2,
+                opacity: 0.75,
+                fillColor: '#fb7185',
+                fillOpacity: 0.12,
+              }}
+            />
+          ))}
+
         {/* MTR Station Markers */}
         {stationMarkers.map((marker) => {
           const isInterchange = marker.allLines.length > 1;
@@ -298,6 +360,9 @@ export default function MapView({
           // Check accessibility highlight
           const isAccHighlighted = highlightedStationIds ? highlightedStationIds.has(marker.id) : false;
           const isAccDimmed = highlightedStationIds !== null && !isAccHighlighted;
+
+          // Nearby Explore: does this station have curated nearby data?
+          const isNearbyStation = showNearbyStations && NEARBY_STATION_IDS.has(marker.id);
 
           // Special rendering for route stations
           let radius = isInterchange ? 8 : 7;
@@ -343,6 +408,7 @@ export default function MapView({
             fillOpacity = 0.25;
           }
 
+
           return (
             <CircleMarker
               key={marker.id}
@@ -371,6 +437,7 @@ export default function MapView({
                   {role === 'destination' && <><br /><span style={{ color: '#dc2626', fontWeight: 600, fontSize: '11px' }}>🔴 {locale === 'en' ? 'Destination' : locale === 'zh-Hans' ? '终点' : '終點'}</span></>}
                   {role === 'exitReenter' && <><br /><span style={{ color: '#ea580c', fontWeight: 600, fontSize: '11px' }}>🟠 {locale === 'en' ? 'Exit & Re-enter' : locale === 'zh-Hans' ? '出闸再入闸' : '出閘再入閘'}</span></>}
                   {isAccHighlighted && <><br /><span style={{ color: '#6d28d9', fontWeight: 600, fontSize: '11px' }}>◆ {t(locale, 'accessibilityFilterMatch')}</span></>}
+                  {isNearbyStation && <><br /><span style={{ color: '#e11d48', fontWeight: 700, fontSize: '11px' }}>🍽 {t(locale, 'nearbyOpenPanel')}</span></>}
                 </div>
               </Tooltip>
               <StationPopup
@@ -378,6 +445,7 @@ export default function MapView({
                 station={stations[marker.id]}
                 lines={marker.allLines}
                 locale={locale}
+                onOpenNearby={onOpenNearby}
               />
             </CircleMarker>
           );
@@ -393,6 +461,21 @@ export default function MapView({
           {/* LRT Station Markers (Static + Live Popup) */}
           {showLRT && <LRTStationLayer locale={locale} />}
         </Suspense>
+
+        {/* Nearby Explore POI Layer */}
+        {nearbyStationId && (
+          <PoiLayer
+            pois={nearbyPois}
+            center={stationCoordinates[nearbyStationId] || null}
+            radius={nearbyRadius}
+            stationId={nearbyStationId}
+            activePoiId={activePoiId}
+            flyNonce={flyNonce}
+            tourPois={tourPois}
+            locale={locale}
+            onSelectPoi={onSelectPoi}
+          />
+        )}
 
       </MapContainer>
 
