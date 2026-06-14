@@ -56,6 +56,18 @@ PRIORITY = [
     "117", "118", "119", "51", "52", "57", "54", "55", "42", "39", "47", "56", "94",
 ]
 
+# --rest 模式下按站点重要度分配每站配额(保证所有站都有、重要站更多)
+HIGH_CAP = set("7 13 14 18 19 20 21 22 23 24 38 48 49 36 37 81 82 83 87 88 89".split())
+LOW_CAP = set("76 78 72 73 74 75 115 117 118 119 54 55 42 39 47 56 57 51 52".split())
+
+
+def cap_for(sid):
+    if sid in HIGH_CAP:
+        return 22   # 市区食肆密集站
+    if sid in LOW_CAP:
+        return 8    # 偏远/离岛/口岸站
+    return 12       # 其余
+
 CUISINE_RULES = [
     ("dim sum", "dimsum"), ("dai pai dong", "chinese"), ("hot pot", "hotpot"),
     ("hotpot", "hotpot"), ("ramen", "ramen"), ("sushi", "sushi"),
@@ -303,8 +315,9 @@ def main():
             print(f"station {sid}: 已有 Google 数据,跳过(不重复抓取)")
             continue
         slat, slng = coords[sid]
+        this_cap = cap_for(sid) if "--rest" in flags else cap
         try:
-            items = apify_scrape(token, slat, slng, cap)
+            items = apify_scrape(token, slat, slng, this_cap)
             consec_402 = 0
         except Exception as e:  # noqa: BLE001
             print(f"station {sid}: SCRAPE FAILED {e}")
