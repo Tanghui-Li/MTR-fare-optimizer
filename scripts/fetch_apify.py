@@ -45,6 +45,17 @@ CORE = [
     "68", "67", "25", "116", "120", "50", "43", "86",
 ]
 
+# --rest 模式的优先顺序:剩余核心站 → 市区热门 → 新界/外围(钱用光前先抓重要的)
+PRIORITY = [
+    "10", "91", "68", "67", "25", "116", "120", "50", "43", "86",
+    "65", "80", "85", "84", "53", "41", "32", "34", "35", "30", "29",
+    "9", "12", "13", "14", "7", "18", "19", "20", "48", "38", "49",
+    "22", "23", "87", "89", "88", "81", "82", "83", "36", "37", "24", "21",
+    "69", "71", "72", "73", "74", "75", "76", "78", "90", "92", "93",
+    "96", "97", "98", "99", "100", "101", "102", "103", "111", "114", "115",
+    "117", "118", "119", "51", "52", "57", "54", "55", "42", "39", "47", "56", "94",
+]
+
 CUISINE_RULES = [
     ("dim sum", "dimsum"), ("dai pai dong", "chinese"), ("hot pot", "hotpot"),
     ("hotpot", "hotpot"), ("ramen", "ramen"), ("sushi", "sushi"),
@@ -260,17 +271,27 @@ def main():
             flags.add(a); i += 1; continue
         args.append(a); i += 1
 
-    targets = CORE if "--core" in flags else (args or ["3"])
-
     token = load_token()
     coords = parse_coords()
     data = json.load(open(POIS_JSON, encoding="utf-8"))
+
+    if "--rest" in flags:
+        have = {k for k, v in data.items()
+                if any(p.get("id", "").startswith("g") for p in v if p["type"] == "food")}
+        remaining = [k for k in data.keys() if k not in have]
+        targets = ([s for s in PRIORITY if s in remaining]
+                   + sorted([s for s in remaining if s not in PRIORITY], key=int))
+    elif "--core" in flags:
+        targets = CORE
+    else:
+        targets = args or ["3"]
 
     print(f"proxy HTTP_PROXY={os.environ.get('HTTP_PROXY', '(none)')}")
     print(f"targets: {targets} | cap/station={cap}")
 
     downloaded = {}
     scraped_total = 0
+    consec_402 = 0
     for sid in targets:
         if scraped_total >= budget:
             print(f"已达预算上限 {budget} 家,停止(已抓 {scraped_total})")
@@ -284,8 +305,14 @@ def main():
         slat, slng = coords[sid]
         try:
             items = apify_scrape(token, slat, slng, cap)
+            consec_402 = 0
         except Exception as e:  # noqa: BLE001
             print(f"station {sid}: SCRAPE FAILED {e}")
+            if "402" in str(e):
+                consec_402 += 1
+                if consec_402 >= 3:
+                    print("额度已耗尽(连续 402),停止")
+                    break
             continue
         scraped_total += len(items)
 
