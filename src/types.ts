@@ -120,3 +120,26 @@ export interface GraphState {
   previousKey: string | null;
   viaEdge: GraphEdge | null;
 }
+
+/**
+ * 周边探索 POI（来源：OpenStreetMap，构建期生成至 data/pois.json）
+ */
+export interface Poi {
+  id: string;
+  type: 'food' | 'attraction';
+  kind: string; // OSM amenity / tourism 原始值
+  name: { default: string; en: string; zh: string };
+  cuisineKey: string;
+  lat: number;
+  lng: number;
+  distanceM: number;
+  walkMin: number;
+  score: number;
+  featured: boolean;
+  website: string;
+  phone: string;
+  openingHours: string;
+}
+
+export type PoiCategory = 'all' | 'food' | 'attraction';
+export type PoiSort = 'recommend' | 'distance';
