@@ -14,6 +14,14 @@ export function localizedPoiSecondary(poi: Poi, locale: Locale): string {
   return candidate;
 }
 
+/** POI 真实简介（按语言回退）；无收录则返回空串 */
+export function localizedPoiDescription(poi: Poi, locale: Locale): string {
+  const d = poi.description;
+  if (!d) return '';
+  if (locale === 'en') return d.en || d.zh || '';
+  return d.zh || d.en || '';
+}
+
 /** 推荐分映射为 0-5 的整数星条（仅用于"信息完整度"可视化，非真实评分） */
 export function recommendBars(score: number, featured: boolean): number {
   if (featured) return 5;

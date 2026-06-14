@@ -139,6 +139,8 @@ const localeText = {
     nearbyRecommendLabel: '推薦度',
     nearbyFeatured: '精選',
     nearbyThumbNote: '示意圖',
+    nearbyWiki: '維基百科',
+    nearbyPhotoSource: '相片來源（Wikimedia Commons）',
     nearbyLocate: '在地圖上定位',
     nearbyWebsite: '官網',
     nearbyPhone: '電話',
@@ -161,6 +163,7 @@ const localeText = {
     nearbyViewAll: '查看全部',
     nearbyEmptyInRadius: '此半徑內暫無地點',
     nearbyExpandTo: '擴大半徑至',
+    nearbySortRating: '評分',
   },
   en: {
     appBrand: 'MTR Tools',
@@ -294,6 +297,8 @@ const localeText = {
     nearbyRecommendLabel: 'Match',
     nearbyFeatured: 'Featured',
     nearbyThumbNote: 'Illustrative',
+    nearbyWiki: 'Wikipedia',
+    nearbyPhotoSource: 'Photo source (Wikimedia Commons)',
     nearbyLocate: 'Locate on map',
     nearbyWebsite: 'Website',
     nearbyPhone: 'Call',
@@ -316,6 +321,7 @@ const localeText = {
     nearbyViewAll: 'View all',
     nearbyEmptyInRadius: 'Nothing within this radius',
     nearbyExpandTo: 'Expand radius to',
+    nearbySortRating: 'Rating',
   },
   'zh-Hans': {
     appBrand: 'MTR 工具',
@@ -449,6 +455,8 @@ const localeText = {
     nearbyRecommendLabel: '推荐度',
     nearbyFeatured: '精选',
     nearbyThumbNote: '示意图',
+    nearbyWiki: '维基百科',
+    nearbyPhotoSource: '相片来源（Wikimedia Commons）',
     nearbyLocate: '在地图上定位',
     nearbyWebsite: '官网',
     nearbyPhone: '电话',
@@ -471,6 +479,7 @@ const localeText = {
     nearbyViewAll: '查看全部',
     nearbyEmptyInRadius: '此半径内暂无地点',
     nearbyExpandTo: '扩大半径至',
+    nearbySortRating: '评分',
   },
 } as const;
 

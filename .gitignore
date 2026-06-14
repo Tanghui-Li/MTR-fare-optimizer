@@ -32,3 +32,6 @@ __pycache__/
 .venv/
 venv/
 env/
+token.env
+*.env
+.env

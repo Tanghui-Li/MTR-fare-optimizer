@@ -2745,6 +2745,25 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 45%);
   pointer-events: none;
 }
+/* 真实照片：覆盖在渐变占位之上，加载后淡入；失败则回退占位 */
+.poi-thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 0.45s ease, transform 0.6s ease;
+  z-index: 2;
+}
+.poi-thumb-img.loaded {
+  opacity: 1;
+  transform: none;
+}
+.poi-thumb.has-photo {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.1);
+}
 
 /* ---- 左侧路线结果下的「终点周边」CTA ---- */
 .nearby-cta {
@@ -3230,6 +3249,27 @@
 }
 .poi-rec-bar.on { background: linear-gradient(90deg, var(--poi-rose-soft), var(--poi-rose)); }
 
+/* 真实评分（Google）+ 价位 */
+.poi-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  font-size: 13px;
+  color: #0f172a;
+}
+.poi-rating-star { width: 14px; height: 14px; color: #f59e0b; fill: #f59e0b; }
+.poi-rating strong { font-weight: 900; }
+.poi-rating-count { color: var(--color-text-muted); font-size: 11px; font-weight: 700; }
+.poi-price {
+  font-size: 11px;
+  font-weight: 800;
+  color: #047857;
+  background: #ecfdf5;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
 .poi-badge {
   display: inline-flex;
   align-items: center;
@@ -3282,6 +3322,19 @@
   margin-bottom: 10px;
   border-radius: 14px;
   overflow: hidden;
+  box-shadow: 0 6px 18px -10px rgba(15, 23, 42, 0.4);
+}
+/* 有真实照片时，底部加一层渐变 scrim，保证署名可读 */
+.poi-hero.has-photo::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46%;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.62) 0%, rgba(15, 23, 42, 0) 100%);
+  pointer-events: none;
+  z-index: 3;
 }
 .poi-hero-note {
   position: absolute;
@@ -3295,11 +3348,41 @@
   font-weight: 700;
   letter-spacing: 0.04em;
 }
+/* 照片署名（作者 · 授权），满足 CC BY-SA 等署名要求 */
+.poi-hero-credit {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 7px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 18px);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+a.poi-hero-credit:hover { color: #fff; text-decoration: underline; }
+a.poi-hero-credit:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
+.poi-hero-credit-icon { width: 11px; height: 11px; flex-shrink: 0; opacity: 0.9; }
 .poi-intro {
   font-size: 12.5px;
   line-height: 1.6;
   color: var(--color-text);
   margin-bottom: 8px;
+}
+/* 真实简介（来自维基百科）：加一条玫瑰色引导边，与模板句区分 */
+.poi-intro.real {
+  padding: 2px 0 2px 10px;
+  border-left: 3px solid var(--poi-rose-soft);
+  color: var(--color-text);
 }
 .poi-fact {
   display: flex;
