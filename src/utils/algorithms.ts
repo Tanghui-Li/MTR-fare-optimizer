@@ -17,10 +17,23 @@ export interface GraphState {
   nodeId: string;
   usedMask: number;
   totalFare: number;
+  totalMinutes: number;
+  score: number;
+  gateChanges: number;
   transfers: number;
   stops: number;
   previousKey: string | null;
   viaEdge: GraphEdge | null;
+}
+
+export interface DijkstraOptions {
+  boringMode?: boolean;
+  scoreEdge?: (edge: GraphEdge, current: GraphState) => number;
+  maxGateChanges?: number | null;
+}
+
+function getStateKey(state: Pick<GraphState, 'nodeId' | 'usedMask' | 'gateChanges'>): string {
+  return `${state.nodeId}|${state.usedMask}|${state.gateChanges}`;
 }
 
 export function bfsPath(start: string, end: string, adjacency: Map<string, Set<string>>): string[] {
@@ -74,31 +87,53 @@ export function dijkstra(
   graph: Map<string, GraphEdge[]>,
   originId: string,
   destinationId: string,
-  boringMode: boolean,
+  boringModeOrOptions: boolean | DijkstraOptions,
 ): { route: string[]; edges: GraphEdge[]; totalFare: number } {
   if (originId === destinationId) {
     return { route: [originId], edges: [], totalFare: 0 };
   }
 
+  const options: DijkstraOptions = typeof boringModeOrOptions === 'boolean'
+    ? { boringMode: boringModeOrOptions }
+    : boringModeOrOptions;
+  const boringMode = Boolean(options.boringMode);
+  const scoreEdge = options.scoreEdge ?? ((edge: GraphEdge) => edge.fare);
+  const maxGateChanges = options.maxGateChanges;
+
   const states = new Map<string, GraphState>();
   const queue: GraphState[] = [];
   const pushState = (state: GraphState) => {
-    const key = `${state.nodeId}|${state.usedMask}`;
+    const key = getStateKey(state);
     const prev = states.get(key);
     if (prev) {
-      if (prev.totalFare < state.totalFare) return;
-      if (prev.totalFare === state.totalFare) {
-        if (prev.transfers < state.transfers) return;
-        if (prev.transfers === state.transfers && prev.stops <= state.stops) return;
+      if (prev.score < state.score) return;
+      if (prev.score === state.score) {
+        if (prev.totalFare < state.totalFare) return;
+        if (prev.totalFare === state.totalFare) {
+          if (prev.transfers < state.transfers) return;
+          if (prev.transfers === state.transfers && prev.stops <= state.stops) return;
+        }
       }
     }
     states.set(key, state);
     queue.push(state);
   };
 
-  pushState({ nodeId: originId, usedMask: 0, totalFare: 0, transfers: 0, stops: 0, previousKey: null, viaEdge: null });
+  pushState({
+    nodeId: originId,
+    usedMask: 0,
+    totalFare: 0,
+    totalMinutes: 0,
+    score: 0,
+    transfers: 0,
+    gateChanges: 0,
+    stops: 0,
+    previousKey: null,
+    viaEdge: null,
+  });
 
   let bestKey: string | null = null;
+  let bestScore = Number.POSITIVE_INFINITY;
   let bestFare = Number.POSITIVE_INFINITY;
   let bestTransfers = Number.POSITIVE_INFINITY;
   let bestStops = Number.POSITIVE_INFINITY;
@@ -108,34 +143,41 @@ export function dijkstra(
     for (let i = 1; i < queue.length; i++) {
       const q = queue[i];
       const b = queue[bestIndex];
-      if (q.totalFare < b.totalFare) {
+      if (q.score < b.score) {
         bestIndex = i;
-      } else if (q.totalFare === b.totalFare) {
-        if (q.transfers < b.transfers) {
+      } else if (q.score === b.score) {
+        if (q.totalFare < b.totalFare) {
           bestIndex = i;
-        } else if (q.transfers === b.transfers && q.stops < b.stops) {
-          bestIndex = i;
+        } else if (q.totalFare === b.totalFare) {
+          if (q.transfers < b.transfers) {
+            bestIndex = i;
+          } else if (q.transfers === b.transfers && q.stops < b.stops) {
+            bestIndex = i;
+          }
         }
       }
     }
     const current = queue.splice(bestIndex, 1)[0];
-    const currentKey = `${current.nodeId}|${current.usedMask}`;
+    const currentKey = getStateKey(current);
 
     if (
-      current.totalFare > bestFare ||
-      (current.totalFare === bestFare && current.transfers > bestTransfers) ||
-      (current.totalFare === bestFare && current.transfers === bestTransfers && current.stops > bestStops)
+      current.score > bestScore ||
+      (current.score === bestScore && current.totalFare > bestFare) ||
+      (current.score === bestScore && current.totalFare === bestFare && current.transfers > bestTransfers) ||
+      (current.score === bestScore && current.totalFare === bestFare && current.transfers === bestTransfers && current.stops > bestStops)
     ) {
       continue;
     }
 
     if (current.nodeId === destinationId) {
       const isBetter = 
-        current.totalFare < bestFare ||
-        (current.totalFare === bestFare && current.transfers < bestTransfers) ||
-        (current.totalFare === bestFare && current.transfers === bestTransfers && current.stops < bestStops);
+        current.score < bestScore ||
+        (current.score === bestScore && current.totalFare < bestFare) ||
+        (current.score === bestScore && current.totalFare === bestFare && current.transfers < bestTransfers) ||
+        (current.score === bestScore && current.totalFare === bestFare && current.transfers === bestTransfers && current.stops < bestStops);
         
       if (isBetter) {
+        bestScore = current.score;
         bestFare = current.totalFare;
         bestTransfers = current.transfers;
         bestStops = current.stops;
@@ -151,16 +193,24 @@ export function dijkstra(
 
       const nextMask = current.usedMask | bit;
       const nextFare = current.totalFare + edge.fare;
+      const addsGateChange = (current.viaEdge?.fare ?? 0) > 0;
+      const nextGateChanges = current.gateChanges + (addsGateChange ? 1 : 0);
       const nextTransfers = current.transfers + (edge.mode === 'TRANSFER' ? 1 : 0);
+      if (maxGateChanges !== null && maxGateChanges !== undefined && nextGateChanges > maxGateChanges) continue;
       const nextStops = current.stops + 1;
-      const nextKey = `${edge.to}|${nextMask}`;
+      const nextMinutes = current.totalMinutes + (edge.estimatedMinutes ?? 0);
+      const nextScore = current.score + scoreEdge(edge, current);
+      const nextKey = `${edge.to}|${nextMask}|${nextGateChanges}`;
       
       const prev = states.get(nextKey);
       if (prev) {
-        if (prev.totalFare < nextFare) continue;
-        if (prev.totalFare === nextFare) {
-          if (prev.transfers < nextTransfers) continue;
-          if (prev.transfers === nextTransfers && prev.stops <= nextStops) continue;
+        if (prev.score < nextScore) continue;
+        if (prev.score === nextScore) {
+          if (prev.totalFare < nextFare) continue;
+          if (prev.totalFare === nextFare) {
+            if (prev.transfers < nextTransfers) continue;
+            if (prev.transfers === nextTransfers && prev.stops <= nextStops) continue;
+          }
         }
       }
 
@@ -168,6 +218,9 @@ export function dijkstra(
         nodeId: edge.to,
         usedMask: nextMask,
         totalFare: nextFare,
+        totalMinutes: nextMinutes,
+        score: nextScore,
+        gateChanges: nextGateChanges,
         transfers: nextTransfers,
         stops: nextStops,
         previousKey: currentKey,

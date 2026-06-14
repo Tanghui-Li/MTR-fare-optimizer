@@ -34,6 +34,42 @@ export interface RouteResult {
 export type TicketType = 'octopus' | 'single';
 export type Locale = 'zh-Hant' | 'en' | 'zh-Hans';
 export type TransportMode = 'MTR' | 'AEL' | 'LRT' | 'NWBUS' | 'TAIPOBUS' | 'TRANSFER';
+export type RouteOptimizationGoal = 'fare' | 'balanced' | 'time';
+export type AccessibilityRouteMode = 'off' | 'prefer' | 'require';
+
+export interface RoutePlanningPreferences {
+  goal: RouteOptimizationGoal;
+  accessibilityMode: AccessibilityRouteMode;
+  accessibilityFilter: string[][];
+  maxGateChanges: number | null;
+  minSavings: number;
+}
+
+export interface RouteMetrics {
+  fare: number;
+  estimatedMinutes: number;
+  gateChanges: number;
+  transferCount: number;
+  stationCount: number;
+  accessibilityMatchedStops: number;
+  accessibilityProblemStops: number;
+  accessibilityScore: number;
+  score: number;
+}
+
+export interface RouteInsight {
+  selectedReason: string;
+  tradeoffNotes: string[];
+  metrics: RouteMetrics;
+  alternatives: {
+    lowestFare?: RouteMetrics;
+    regular?: RouteMetrics;
+    fastest?: RouteMetrics;
+    balanced?: RouteMetrics;
+  };
+  suppressedSavings: boolean;
+  accessibilityMode: AccessibilityRouteMode;
+}
 
 export interface UnifiedFareMatrix {
   octopus: FareMatrix;
@@ -74,6 +110,7 @@ export interface GraphEdge {
   mode: TransportMode;
   lineCode: string;
   busKey?: string;
+  estimatedMinutes?: number;
 }
 
 export interface GraphState {

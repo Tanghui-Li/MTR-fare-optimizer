@@ -3,13 +3,27 @@ import ControlPanel from './components/ControlPanel'
 import RouteVisualizer from './components/RouteVisualizer'
 import MapView from './components/MapView'
 import AccessibilityFilter from './components/AccessibilityFilter'
-import { findMultimodalRoute } from './routePlanner'
+import { findRouteCandidateSet } from './routePlanner'
 import { unifiedStationMap } from './data/unifiedNetwork'
 import { getFareMatrix } from './data/mtrFareMatrix'
-import { RouteResult, StationMap, TicketType, DetailedSegment, Locale, Poi, PoiCategory, PoiSort } from './types'
+import {
+  AccessibilityRouteMode,
+  RouteInsight,
+  RouteOptimizationGoal,
+  RoutePlanningPreferences,
+  RouteResult,
+  StationMap,
+  TicketType,
+  DetailedSegment,
+  Locale,
+  Poi,
+  PoiCategory,
+  PoiSort,
+} from './types'
 import { formatCurrency, localeOptions, t } from './i18n'
 import { SlidersHorizontal, Compass } from 'lucide-react'
 import { useMobileSheetDrag } from './hooks/useMobileSheetDrag'
+import { selectRecommendedRoute } from './utils/routeInsights'
 import { getLocalizedText, getSecondaryLocalizedText } from './data/zhHansText'
 import NearbyPanel from './components/NearbyPanel'
 import { useNearbyPois, stationHasPois } from './hooks/useNearbyPois'
@@ -22,13 +36,23 @@ interface RouteSearchParams {
   originId: string | null
   destinationId: string | null
   ticketType: TicketType
+  goal: RouteOptimizationGoal
+  accessibilityMode: AccessibilityRouteMode
+  maxGateChanges: number | null
+  minSavings: number
 }
 
 const initialSearchParams: RouteSearchParams = {
   originId: null,
   destinationId: null,
   ticketType: 'octopus',
+  goal: 'fare',
+  accessibilityMode: 'off',
+  maxGateChanges: null,
+  minSavings: 0,
 }
+
+const DEFAULT_ACCESSIBILITY_ROUTE_FILTER = [['AJ1', 'AJ2', 'AJ3', 'AJ4', 'AJ5', 'AJ8', 'AJ9'], ['MJ1']];
 
 const MOBILE_SHEET_QUERY = '(max-width: 900px), ((max-height: 600px) and (hover: none) and (pointer: coarse))';
 
@@ -136,8 +160,10 @@ function PlanningStatus({
 function App() {
   const [draftSearchParams, setDraftSearchParams] = useState<RouteSearchParams>(initialSearchParams)
   const [submittedSearchParams, setSubmittedSearchParams] = useState<RouteSearchParams>(initialSearchParams)
+  const [submittedAccessibilityFilter, setSubmittedAccessibilityFilter] = useState<string[][]>([])
   const [locale, setLocale] = useState<Locale>('zh-Hant')
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null)
+  const [routeInsight, setRouteInsight] = useState<RouteInsight | null>(null)
   
   const { sheetRef, setSheetHeight, isExpanded: isSheetExpanded, handlers: dragHandlers } = useMobileSheetDrag(400)
   
@@ -298,13 +324,22 @@ function App() {
   const hasUnappliedChanges = hasAppliedRoute && (
     draftSearchParams.originId !== submittedSearchParams.originId ||
     draftSearchParams.destinationId !== submittedSearchParams.destinationId ||
-    draftSearchParams.ticketType !== submittedSearchParams.ticketType
+    draftSearchParams.ticketType !== submittedSearchParams.ticketType ||
+    draftSearchParams.goal !== submittedSearchParams.goal ||
+    draftSearchParams.accessibilityMode !== submittedSearchParams.accessibilityMode ||
+    draftSearchParams.maxGateChanges !== submittedSearchParams.maxGateChanges ||
+    draftSearchParams.minSavings !== submittedSearchParams.minSavings ||
+    (
+      draftSearchParams.accessibilityMode !== 'off' &&
+      JSON.stringify(accessibilityFilter) !== JSON.stringify(submittedAccessibilityFilter)
+    )
   );
   const canPlanRoute = hasCompleteDraft && !sameStationId;
 
   const handleSubmitRoute = () => {
     if (!canPlanRoute) return
     setSubmittedSearchParams(draftSearchParams)
+    setSubmittedAccessibilityFilter(accessibilityFilter)
     setRouteMode('optimized')
   }
 
@@ -316,6 +351,7 @@ function App() {
     }
     setDraftSearchParams(clearedParams)
     setSubmittedSearchParams(clearedParams)
+    setSubmittedAccessibilityFilter([])
     setRouteMode('optimized')
   }
 
@@ -323,6 +359,7 @@ function App() {
     if (submittedSearchParams.originId && submittedSearchParams.destinationId) {
       if (submittedSearchParams.originId === submittedSearchParams.destinationId) {
         setRouteResult(null)
+        setRouteInsight(null)
         setDisplayedRouteInfo({
           originId: null,
           destinationId: null,
@@ -335,10 +372,28 @@ function App() {
       }
 
       const matrixToUse = getFareMatrix(submittedSearchParams.ticketType);
-      const optimizedResult = findMultimodalRoute(matrixToUse, submittedSearchParams.originId, submittedSearchParams.destinationId, submittedSearchParams.ticketType, 'optimized')
-      const boringResult = findMultimodalRoute(matrixToUse, submittedSearchParams.originId, submittedSearchParams.destinationId, submittedSearchParams.ticketType, 'boring')
+      const routePreferences: RoutePlanningPreferences = {
+        goal: submittedSearchParams.goal,
+        accessibilityMode: submittedSearchParams.accessibilityMode,
+        accessibilityFilter: submittedSearchParams.accessibilityMode === 'off'
+          ? []
+          : (submittedAccessibilityFilter.length > 0 ? submittedAccessibilityFilter : DEFAULT_ACCESSIBILITY_ROUTE_FILTER),
+        maxGateChanges: submittedSearchParams.maxGateChanges,
+        minSavings: submittedSearchParams.minSavings,
+      };
+      const candidates = findRouteCandidateSet(
+        matrixToUse,
+        submittedSearchParams.originId,
+        submittedSearchParams.destinationId,
+        submittedSearchParams.ticketType,
+        routePreferences,
+      );
+      const recommendation = selectRecommendedRoute(candidates, routePreferences);
+      const optimizedResult = recommendation.result;
+      const boringResult = candidates.regular;
 
       setRouteResult(optimizedResult)
+      setRouteInsight(recommendation.insight)
       setDisplayedRouteInfo({
         originId: submittedSearchParams.originId,
         destinationId: submittedSearchParams.destinationId,
@@ -350,6 +405,7 @@ function App() {
 
     } else {
       setRouteResult(null)
+      setRouteInsight(null)
       setDisplayedRouteInfo({
         originId: null,
         destinationId: null,
@@ -359,7 +415,7 @@ function App() {
       setOptimizedSegments([])
       setBoringSegments([])
     }
-  }, [submittedSearchParams])
+  }, [submittedSearchParams, submittedAccessibilityFilter])
 
   useEffect(() => {
     if (!routeResult) {
@@ -459,9 +515,17 @@ function App() {
               originId={draftSearchParams.originId}
               destinationId={draftSearchParams.destinationId}
               ticketType={draftSearchParams.ticketType}
+              goal={draftSearchParams.goal}
+              accessibilityMode={draftSearchParams.accessibilityMode}
+              maxGateChanges={draftSearchParams.maxGateChanges}
+              minSavings={draftSearchParams.minSavings}
               onOriginChange={(id) => setDraftSearchParams(prev => ({ ...prev, originId: id }))}
               onDestinationChange={(id) => setDraftSearchParams(prev => ({ ...prev, destinationId: id }))}
               onTicketTypeChange={(type) => setDraftSearchParams(prev => ({ ...prev, ticketType: type }))}
+              onGoalChange={(goal) => setDraftSearchParams(prev => ({ ...prev, goal }))}
+              onAccessibilityModeChange={(accessibilityMode) => setDraftSearchParams(prev => ({ ...prev, accessibilityMode }))}
+              onMaxGateChangesChange={(maxGateChanges) => setDraftSearchParams(prev => ({ ...prev, maxGateChanges }))}
+              onMinSavingsChange={(minSavings) => setDraftSearchParams(prev => ({ ...prev, minSavings }))}
               onClearRoute={handleClearRoute}
               onPlanRoute={handleSubmitRoute}
               canPlanRoute={canPlanRoute}
@@ -508,6 +572,7 @@ function App() {
                 onRouteModeChange={setRouteMode}
                 optimizedSegments={optimizedSegments}
                 boringSegments={boringSegments}
+                routeInsight={routeInsight}
                 locale={locale}
               />
             )}
