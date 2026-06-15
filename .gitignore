@@ -35,6 +35,7 @@ dist-ssr/
 *.nav
 *.out
 *.pdf
+!docs/slides/hci_final_presentation.pdf
 *.run.xml
 *.snm
 *.synctex.gz
