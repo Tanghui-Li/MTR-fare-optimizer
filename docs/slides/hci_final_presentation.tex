@@ -19,8 +19,6 @@
 \definecolor{SoftGray}{RGB}{245, 247, 250}
 \definecolor{TextGray}{RGB}{45, 55, 72}
 
-\setbeamercolor{title}{fg=MTRBlue}
-\setbeamercolor{frametitle}{fg=MTRBlue}
 \setbeamercolor{normal text}{fg=TextGray}
 \setbeamercolor{block title}{fg=white,bg=MTRBlue}
 \setbeamercolor{block body}{fg=TextGray,bg=SoftGray}
@@ -39,6 +37,7 @@
 
 \begin{document}
 
+\section{概览}
 \begin{frame}
   \titlepage
   \vspace{-1.2em}
@@ -57,7 +56,7 @@
       GitHub 开源仓库：\href{https://github.com/Tanghui-Li/MTR-fare-optimizer/}{Tanghui-Li/MTR-fare-optimizer}\\
       在线部署：\href{https://mtr-optimizer.shgao.top}{mtr-optimizer.shgao.top}\\
       欢迎课后访问和试用。\\[0.6em]
-      \qrcode[height=1.75cm]{https://mtr-optimizer.shgao.top}
+      \qrcode[height=1.6cm]{https://mtr-optimizer.shgao.top}
     \end{column}
   \end{columns}
 \end{frame}
@@ -88,6 +87,7 @@
   \end{columns}
 \end{frame}
 
+\section{背景与算法}
 \begin{frame}{李堂辉：项目背景与设计目标}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.56\textwidth}
@@ -192,7 +192,9 @@
   \end{columns}
 \end{frame}
 
+\section{界面设计}
 \begin{frame}{第二部分：界面设计与交互落地}
+  \small
   \speakerline{高胜寒}{2351837}
   \begin{block}{负责内容}
     桌面端整体界面、移动端适配、路线结果表达、地图线路显示、站点选择体验、图层控制、多语言与整体可用性。
@@ -218,9 +220,10 @@
 \end{frame}
 
 \begin{frame}{桌面端信息架构：规划与地图并列}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.58\textwidth}
-      \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{desktop-map-overview.png}
+      \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{desktop-map-overview.png}
     \end{column}
     \begin{column}{0.38\textwidth}
       \begin{block}{同一任务空间}
@@ -239,6 +242,7 @@
 \end{frame}
 
 \begin{frame}{路线结果展示：让用户敢按推荐走}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.46\textwidth}
       \begin{block}{从金额到可执行步骤}
@@ -253,19 +257,20 @@
       \end{block}
     \end{column}
     \begin{column}{0.50\textwidth}
-      \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{route-result-desktop.png}
+      \includegraphics[width=\linewidth,height=0.60\textheight,keepaspectratio]{route-result-desktop.png}
     \end{column}
   \end{columns}
   \hciprinciple{识别优于回忆：路线卡片直接列出站点序列和操作提示，用户不用记住隐藏票价规则。}
 \end{frame}
 
 \begin{frame}{移动端适配：地图优先与底部面板}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.27\textwidth}
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{mobile-overview.png}
+      \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{mobile-overview.png}
     \end{column}
     \begin{column}{0.27\textwidth}
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{mobile-narrow.png}
+      \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{mobile-narrow.png}
     \end{column}
     \begin{column}{0.42\textwidth}
       \begin{block}{不是压缩桌面端}
@@ -331,6 +336,7 @@
   \hciprinciple{用户控制与包容性设计：不同用户可以按自己的任务、语言和设施需求调整界面。}
 \end{frame}
 
+\section{周边推荐}
 \begin{frame}{第三部分：周边旅游推荐}
   \speakerline{郎若谷}{2351871}
   \begin{block}{负责内容}
@@ -390,6 +396,7 @@
   \hciprinciple{渐进式披露与用户控制：先展示决策必需信息，详情和筛选按需展开。}
 \end{frame}
 
+\section{用户关怀}
 \begin{frame}{第四部分：用户关怀}
   \speakerline{樊祺}{2350262}
   \begin{block}{负责内容}
