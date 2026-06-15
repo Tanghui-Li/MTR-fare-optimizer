@@ -11,8 +11,7 @@ export default defineConfig({
           const normalizedId = id.replaceAll('\\', '/');
 
           if (
-            normalizedId.includes('/node_modules/leaflet/') ||
-            normalizedId.includes('/node_modules/react-leaflet/')
+            normalizedId.includes('/node_modules/leaflet/')
           ) {
             return 'leaflet';
           }

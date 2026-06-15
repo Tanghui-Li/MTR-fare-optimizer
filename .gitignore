@@ -63,3 +63,7 @@ env/
 token.env
 *.env
 .env
+
+# Big PPT Files
+docs/fanqi/HCI汇报.pptx
+docs/fanqi/.~lock*
