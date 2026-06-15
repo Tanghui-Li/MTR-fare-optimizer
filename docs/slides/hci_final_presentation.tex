@@ -192,26 +192,48 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{第二部分：界面设计}
+\begin{frame}{第二部分：界面设计与交互落地}
   \speakerline{高胜寒}{2351837}
   \begin{block}{负责内容}
-    移动端适配、线路显示、路线结果表达、地图图层与整体界面可用性。
+    桌面端整体界面、移动端适配、路线结果表达、地图线路显示、站点选择体验、图层控制、多语言与整体可用性。
   \end{block}
-  \hciprinciple{诺曼执行-评估循环：界面需要支持用户形成目标、执行操作、理解反馈。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{看得懂}
+        票价差异、站点序列、线路颜色和地图位置互相印证，降低用户理解路线的成本。
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{用得顺}
+        桌面端并列展示，移动端地图优先，起终点选择、拖拽面板和图层开关服务同一任务流。
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{信得过}
+        最低票价、常规票价、节省金额和出入闸提示显式展示，让用户能判断推荐路线是否值得执行。
+      \end{block}
+    \end{column}
+  \end{columns}
+  \hciprinciple{诺曼执行-评估循环：帮助用户形成目标、执行操作、理解反馈并修正下一步行为。}
 \end{frame}
 
 \begin{frame}{桌面端信息架构：规划与地图并列}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.60\textwidth}
-      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{desktop-map-overview.png}
+    \begin{column}{0.58\textwidth}
+      \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{desktop-map-overview.png}
     \end{column}
-    \begin{column}{0.36\textwidth}
-      \begin{itemize}
-        \item 左侧：票种、起点、终点、规划状态和路线结果。
-        \item 右侧：真实地图、线路、站点、轻铁、巴士站和实时巴士。
-        \item 用户不需要在表单页和地图页之间切换。
-      \end{itemize}
-      \hciprinciple{尼尔森启发式“系统状态可见性”：输入状态、地图状态和路线结果并列呈现。}
+    \begin{column}{0.38\textwidth}
+      \begin{block}{同一任务空间}
+        \begin{itemize}
+          \item 左侧承载票种、起点、终点、规划状态和路线结果。
+          \item 右侧显示真实地图、线路、站点、轻铁、巴士站和实时巴士。
+          \item 输入和空间验证同时发生，减少页面切换。
+        \end{itemize}
+      \end{block}
+      \begin{block}{状态区分}
+        用户改动起终点后，界面提示需要重新规划，避免误以为地图已经更新。
+      \end{block}
+      \hciprinciple{系统状态可见性：输入状态、地图状态和路线结果并列呈现。}
     \end{column}
   \end{columns}
 \end{frame}
@@ -219,42 +241,94 @@
 \begin{frame}{路线结果展示：让用户敢按推荐走}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.46\textwidth}
-      \begin{block}{展示的信息}
+      \begin{block}{从金额到可执行步骤}
         \begin{itemize}
-          \item 最低票价、常规票价、节省金额
-          \item 出入闸次数、线路名称、站点序列
-          \item 起点、终点、出闸再入闸点的地图高亮
+          \item 同时展示最低票价、常规票价、节省金额和出入闸次数。
+          \item 将算法输出拆成分段卡片：线路、站点序列、直达/换乘、出闸再入闸提示。
+          \item 地图同步高亮起点、终点和关键断点，用户能把文字步骤对应到真实位置。
         \end{itemize}
       \end{block}
-      \begin{block}{用户价值}
-        省钱方案通常涉及额外出入闸，界面需要同时展示节省金额和操作代价。
+      \begin{block}{用户信任}
+        省钱路线常常牺牲一点操作复杂度。如果只显示“更便宜”，用户不一定敢照做；必须把为什么省钱、在哪里操作、代价是什么同时说清。
       \end{block}
     \end{column}
     \begin{column}{0.50\textwidth}
-      \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{route-savings-fanqi.png}
+      \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{route-result-desktop.png}
     \end{column}
   \end{columns}
-  \hciprinciple{诺曼“反馈”原则：操作后立即显示票价、路线、节省金额和地图高亮。}
+  \hciprinciple{识别优于回忆：路线卡片直接列出站点序列和操作提示，用户不用记住隐藏票价规则。}
 \end{frame}
 
 \begin{frame}{移动端适配：地图优先与底部面板}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.27\textwidth}
-      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{mobile-overview.png}
+      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{mobile-overview.png}
     \end{column}
     \begin{column}{0.27\textwidth}
-      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{mobile-narrow.png}
+      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{mobile-narrow.png}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \begin{itemize}
-        \item 手机出行场景中，地图和方向感优先于长表单。
-        \item 路线规划放入底部面板，支持展开、收起和拖拽。
-        \item 窄屏下处理按钮、图层、表单之间的遮挡和误触。
-        \item 线路颜色、图层开关和图例降低复杂地图的信息负担。
-      \end{itemize}
-      \hciprinciple{Fitts 定律与用户控制：移动端把高频控件放在易触达区域，并允许面板展开/收起。}
+      \begin{block}{不是压缩桌面端}
+        \begin{itemize}
+          \item 手机出行场景中，地图和方向感优先。
+          \item 首屏保留地图，路线规划放入底部面板。
+          \item 面板支持展开、收起和拖拽。
+        \end{itemize}
+      \end{block}
+      \begin{block}{窄屏细节}
+        在 390px、360px 等宽度下调整控件间距、按钮尺寸和面板高度，避免互相遮挡。
+      \end{block}
+      \hciprinciple{Fitts 定律与用户控制：高频控件放在易触达区域，并允许面板展开/收起。}
     \end{column}
   \end{columns}
+\end{frame}
+
+\begin{frame}{站点选择与状态反馈：减少查找和误操作成本}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{输入控件}
+        \begin{itemize}
+          \item 起点和终点分区展示，减少方向混淆。
+          \item 支持按线路筛选站点，避免在完整站点列表中长时间滚动。
+          \item 提供交换起终点、清除路线、重新规划等快速修正入口。
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{状态提示}
+        \begin{itemize}
+          \item 未选择完整起终点时禁用规划按钮，阻止无效提交。
+          \item 已有路线后继续修改输入时，提示“尚未应用”的状态差异。
+          \item 同站查询、无结果和需要更新路线等状态用独立提示卡表达。
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \hciprinciple{错误预防与状态可见性：在用户提交前暴露缺失输入，在用户修改后暴露结果是否仍然有效。}
+\end{frame}
+
+\begin{frame}{图层控制、多语言与包容性入口}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{按任务调整信息密度}
+        \begin{itemize}
+          \item 轻铁站、巴士站、实时巴士、周边探索可以独立开关。
+          \item 默认展示核心交通信息，更多信息通过图层渐进打开。
+          \item 当前路线更醒目，无关站点和线路降低视觉干扰。
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \begin{block}{包容性与一致性}
+        \begin{itemize}
+          \item 无障碍筛选入口常驻顶部，服务电梯、轮椅通道等特殊出行需求。
+          \item 繁体中文、英文、简体中文覆盖导航、路线规划、结果和地图状态。
+          \item 按钮、卡片、线路标签和状态提示保持统一视觉语言。
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \hciprinciple{用户控制与包容性设计：不同用户可以按自己的任务、语言和设施需求调整界面。}
 \end{frame}
 
 \begin{frame}{第三部分：周边旅游推荐}
