@@ -91,16 +91,18 @@
 \end{frame}
 
 \section{背景与算法}
-\begin{frame}{李堂辉：项目背景与设计目标}
+\begin{frame}{项目背景与设计目标}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.56\textwidth}
-      \begin{itemize}
+      \begin{itemize}\setlength{\itemsep}{0.15em}
         \item 香港交通网络复杂，直观路线的票价可能高于分段出入闸方案。
         \item 用户真正关心的是：花多少钱、怎么走、在哪里换乘、是否需要额外出入闸。
+        \item 系统把票价查询、断点枚举和总价比较外化到界面，降低用户脑内试算负担。
         \item 除地图上的线路走向几何校正外，站点、票价、设施和实时交通数据均基于香港政府开放资料 data.gov.hk。
         \item 项目已开源在 GitHub：\href{https://github.com/Tanghui-Li/MTR-fare-optimizer/}{Tanghui-Li/MTR-fare-optimizer}，并部署在 \href{https://mtr-optimizer.shgao.top}{mtr-optimizer.shgao.top}。
       \end{itemize}
-      \hciprinciple{尼尔森启发式“系统与现实世界匹配”：用真实站点、线路、票价和设施降低理解成本。}
+      \hciprinciple{分布式认知与概念模型：系统承担复杂计算，用真实站点、票价和出入闸概念对齐用户直觉与港铁票价模型。}
     \end{column}
     \begin{column}{0.40\textwidth}
       \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{desktop-map-overview.png}
@@ -154,15 +156,16 @@
         \begin{itemize}
           \item 票价优化可能要求用户出闸再入闸
           \item 单一金额无法说明可执行步骤
-          \item 分段卡片把“算法结果”转化为“用户能照做的步骤”
+          \item 分段卡片把“算法结果”转化为“用户能照做、能核对的步骤”
         \end{itemize}
       \end{block}
     \end{column}
   \end{columns}
-  \hciprinciple{尼尔森启发式“识别优于回忆”：把站点序列和出入闸动作直接展示，避免用户记忆隐藏规则。}
+  \hciprinciple{识别优于回忆与分布式认知：把站点序列、出入闸动作和价格比较放到界面上，避免用户记忆隐藏规则。}
 \end{frame}
 
 \begin{frame}{回到粉岭：算法正确性与可解释性}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.52\textwidth}
       \begin{block}{查询：罗湖 $\to$ 屯门，成人八达通}
@@ -193,6 +196,7 @@
       \end{block}
     \end{column}
   \end{columns}
+  \hciprinciple{概念模型：用户直觉中的“直达更合理”需要和真实票价矩阵对齐，因此系统必须解释断点、分段和总价。}
 \end{frame}
 
 \section{界面设计}
@@ -223,7 +227,7 @@
 \end{frame}
 
 \begin{frame}{桌面端信息架构：规划与地图并列}
-  \small
+  \footnotesize
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.58\textwidth}
       \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{desktop-map-overview.png}
@@ -237,9 +241,9 @@
         \end{itemize}
       \end{block}
       \begin{block}{状态区分}
-        用户改动起终点后，界面提示需要重新规划，避免误以为地图已经更新。
+        修改起终点后提示需要重新规划，避免把旧路线当作新结果。
       \end{block}
-      \hciprinciple{系统状态可见性：输入状态、地图状态和路线结果并列呈现。}
+      \hciprinciple{格式塔接近性与主体-背景：规划控件成组，路线高亮成为复杂底图中的视觉主体。}
     \end{column}
   \end{columns}
 \end{frame}
@@ -276,7 +280,7 @@
       \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{mobile-narrow.png}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \begin{block}{不是压缩桌面端}
+      \begin{block}{面向移动场景重排}
         \begin{itemize}
           \item 手机出行场景中，地图和方向感优先。
           \item 首屏保留地图，路线规划放入底部面板。
@@ -312,7 +316,7 @@
       \end{block}
     \end{column}
   \end{columns}
-  \hciprinciple{错误预防与状态可见性：在用户提交前暴露缺失输入，在用户修改后暴露结果是否仍然有效。}
+  \hciprinciple{Hick 定律、错误预防与状态可见性：用线路筛选减少选择数量，在提交前暴露缺失输入，在修改后提示结果是否仍然有效。}
 \end{frame}
 
 \begin{frame}{图层控制、多语言与包容性入口}
@@ -336,7 +340,7 @@
       \end{block}
     \end{column}
   \end{columns}
-  \hciprinciple{用户控制与包容性设计：不同用户可以按自己的任务、语言和设施需求调整界面。}
+  \hciprinciple{渐进式披露、一致性与包容性设计：默认保留核心交通信息，更多图层、语言和设施入口按需打开且保持一致视觉语言。}
 \end{frame}
 
 \section{周边推荐}
@@ -522,7 +526,7 @@
   \begin{block}{负责内容}
     无障碍设施信息、无障碍友好路线偏好、智能推荐解释与票价比较。
   \end{block}
-  \hciprinciple{通用设计与包容性设计：让不同能力、语言和出行偏好的用户都能完成任务。}
+  \hciprinciple{通用设计与包容性设计：把老人、轮椅用户、携带行李者和普通乘客放入同一套路线决策框架。}
 \end{frame}
 
 \begin{frame}{无障碍高亮：先筛选，再判断}
@@ -538,7 +542,7 @@
           \item 当前条件下列出 29 个符合条件车站，用户可先判断可达性。
         \end{itemize}
       \end{block}
-      \hciprinciple{尼尔森启发式“系统状态可见性”：筛选状态、结果数量和作用范围直接显示。}
+      \hciprinciple{系统状态可见性与错误预防：筛选状态、结果数量和作用范围直接显示，避免用户误以为路线已经被强制改写。}
     \end{column}
   \end{columns}
 \end{frame}
@@ -557,7 +561,7 @@
           \item 设施逐项用勾选标记呈现，便于快速确认。
         \end{itemize}
       \end{block}
-      \hciprinciple{WCAG 可感知原则：设施信息应可读、可检查。}
+      \hciprinciple{WCAG 可感知原则与识别优于回忆：设施信息应可读、可检查，用户无需记住每个车站的无障碍条件。}
     \end{column}
   \end{columns}
 \end{frame}
@@ -577,7 +581,7 @@
           \item 结果卡展示耗时、出入闸次数和无障碍匹配度
         \end{itemize}
       \end{block}
-      \hciprinciple{用户控制与自由：目标和约束由用户设定。}
+      \hciprinciple{用户控制与自由、错误预防：目标和约束由用户设定，节省过小或出闸过多的方案可被过滤。}
     \end{column}
   \end{columns}
 \end{frame}
@@ -596,7 +600,7 @@
           \item 路线卡提示“请按路线卡在标示车站出闸再入闸”。
         \end{itemize}
       \end{block}
-      \hciprinciple{尼尔森启发式“识别优于回忆”：用户可直接核对金额、次数和操作点。}
+      \hciprinciple{可解释反馈与识别优于回忆：用户可直接核对金额、次数和操作点，判断推荐是否值得执行。}
     \end{column}
   \end{columns}
 \end{frame}
