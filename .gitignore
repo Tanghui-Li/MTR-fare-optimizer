@@ -13,6 +13,34 @@ dist/
 dist-ssr/
 *.local
 
+# LaTeX
+*.acn
+*.acr
+*.alg
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.dvi
+*.fdb_latexmk
+*.fls
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.lot
+*.nav
+*.out
+*.pdf
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.xdv
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
