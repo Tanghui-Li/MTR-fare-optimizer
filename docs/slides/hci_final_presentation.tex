@@ -11,7 +11,7 @@
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{footline}[frame number]
 \setbeamersize{text margin left=8mm,text margin right=8mm}
-\graphicspath{{docs/slides/screenshots/}{screenshots/}}
+\graphicspath{{docs/slides/screenshots/}{screenshots/}{docs/slides/assets/}{assets/}}
 
 \definecolor{MTRBlue}{RGB}{31, 58, 89}
 \definecolor{MTRRed}{RGB}{180, 32, 45}
@@ -260,24 +260,47 @@
 \begin{frame}{第三部分：周边旅游推荐}
   \speakerline{郎若谷}{2351871}
   \begin{block}{负责内容}
-    站点周边景点与美食推荐：回答用户“到站之后吃什么、逛什么、怎么走过去”。
+    站点周边景点与美食推荐：把到站后的吃、逛和步行路线一起纳入出行体验。
   \end{block}
-  \hciprinciple{场景化设计：围绕用户完整旅程设计，而不只覆盖单个查询动作。}
+\end{frame}
+
+\begin{frame}{周边旅游推荐：到站之后，去哪儿？}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.38\textwidth}
+      \begin{block}{从交通查询延伸到完整旅程}
+        选好路线和票价之后，用户还会继续关心附近有什么值得停留、哪些地方离车站近、能不能顺路走过去。
+      \end{block}
+      \small
+      \begin{itemize}
+        \item 目标：让陌生站点周边的信息更好浏览、更容易筛选，也更方便落到实际步行安排上。
+        \item 覆盖：约 96 个车站，2500+ 个兴趣点，2100+ 张本地图片。
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.58\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.44\textheight,keepaspectratio]{lrg-1.png}
+      \vspace{0.15em}
+      \begin{block}{交互闭环}
+        \scriptsize 浏览地点信息 $\to$ 按偏好筛选 $\to$ 在地图上确认位置 $\to$ 组织步行顺序。
+      \end{block}
+    \end{column}
+  \end{columns}
+  \hciprinciple{场景化设计：围绕完整旅程组织功能，让路线规划自然延伸到到站后的活动。}
 \end{frame}
 
 \begin{frame}{周边数据：真实、可缓存、可溯源}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.50\textwidth}
+    \begin{column}{0.48\textwidth}
       \begin{block}{离线数据管线}
         \begin{itemize}
           \item OpenStreetMap：餐饮与景点位置
           \item Wikidata / Wikimedia：图片、简介、授权信息
           \item Apify 抓取结果：评分、评论数、价位等补充信号
-          \item 构建期生成本地 \texttt{pois.json} 和图片资源
+          \item 构建期生成本地 \texttt{pois.json} 与图片资源
         \end{itemize}
       \end{block}
     \end{column}
-    \begin{column}{0.46\textwidth}
+    \begin{column}{0.48\textwidth}
       \begin{block}{当前覆盖}
         \begin{itemize}
           \item 约 96 个车站
@@ -286,34 +309,127 @@
           \item 前端运行时零外网依赖
         \end{itemize}
       \end{block}
-      \hciprinciple{可用性中的效率与可信度：减少等待时间，并标明信息来源以支持用户判断。}
     \end{column}
   \end{columns}
+  \vspace{0.4em}
+  \begin{block}{为什么采用离线管线}
+    \small 数据在构建期完成清洗、合并和缓存，前端只做快速检索与展示；页面响应更稳定，推荐来源也能追溯。
+  \end{block}
+  \hciprinciple{效率与可信度：让内容加载更快，也让用户知道推荐信息从哪里来。}
 \end{frame}
 
-\begin{frame}{周边探索交互：从列表到可走路线}
+\begin{frame}{怎么看：卡片化呈现，按需展开}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.48\textwidth}
-      \begin{block}{探索面板}
+    \begin{column}{0.36\textwidth}
+      \begin{block}{卡片首层}
+        \begin{itemize}
+          \item 缩略图、名称、类型
+          \item 距离、步行时间
+          \item 评分、价位、来源
+        \end{itemize}
+      \end{block}
+      \begin{block}{展开详情}
+        \begin{itemize}
+          \item 大图、简介、营业时间
+          \item 定位、电话、官网
+          \item 收藏或加入逛吃路线
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.60\textwidth}
+      \begin{columns}[T,onlytextwidth]
+        \begin{column}{0.35\textwidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{lrg-4.png}\\
+          {\scriptsize 卡片展开：从摘要到详情}
+        \end{column}
+        \begin{column}{0.62\textwidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{lrg-7.png}\\
+          {\scriptsize 站点弹窗与周边面板形成连续入口}
+        \end{column}
+      \end{columns}
+    \end{column}
+  \end{columns}
+  \hciprinciple{渐进式披露与识别优于记忆：先把判断地点所需的线索放出来，更多细节留给用户点开查看。}
+\end{frame}
+
+\begin{frame}{怎么选：把上百个选择收敛成几个}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.33\textwidth}
+      \begin{block}{选择工具}
         \begin{itemize}
           \item 类别：全部 / 美食 / 景点
           \item 排序：推荐、距离、评分
           \item 半径、菜系、收藏、随机推荐
-          \item 空态给出“扩大半径”的可执行建议
+          \item 筛空时提供“扩大半径”的直接出口
         \end{itemize}
+      \end{block}
+      \begin{block}{交互价值}
+        \small 用户可以从当前站点、步行半径和兴趣类型出发，慢慢把候选地点缩小到少量可比较的选择。
       \end{block}
     \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{block}{地图与路线}
-        \begin{itemize}
-          \item POI 卡片与地图标记双向联动
-          \item 卡片采用渐进式披露：扫读信息先显示，详情按需展开
-          \item 收藏多个点后生成最近邻“逛吃路线”
-        \end{itemize}
-      \end{block}
+    \begin{column}{0.63\textwidth}
+      \centering
+      \includegraphics[width=0.38\linewidth,height=0.22\textheight,keepaspectratio,trim=0 430 0 0,clip]{lrg-3.png}\\[-0.1em]
+      {\scriptsize 筛选控件集中呈现（上半部分）}\\[0.25em]
+      \includegraphics[width=\linewidth,height=0.45\textheight,keepaspectratio]{lrg-5.png}\\[-0.1em]
+      {\scriptsize 空结果给出可恢复操作}
     \end{column}
   \end{columns}
-  \hciprinciple{渐进式披露与用户控制：先展示决策必需信息，详情和筛选按需展开。}
+  \hciprinciple{用户控制与错误恢复：筛选条件由用户掌握，结果为空时也能直接扩大范围继续探索。}
+\end{frame}
+
+\begin{frame}{怎么逛：地图联动，串成一条路线}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.38\textwidth}
+      \begin{block}{列表与地图双向联动}
+        \begin{itemize}
+          \item 点击卡片后地图定位并高亮地点
+          \item 点击地图标记后回到对应卡片
+          \item 半径圈、类别颜色和标记说明可达范围
+        \end{itemize}
+      \end{block}
+      \begin{block}{逛吃路线}
+        \small 用户收藏多个地点后，系统用编号点和虚线串起推荐顺序，并估算总步行时长。
+      \end{block}
+    \end{column}
+    \begin{column}{0.58\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.31\textheight,keepaspectratio]{lrg-1.png}\\[-0.1em]
+      {\scriptsize 半径圈、标记与面板联动}\\[0.35em]
+      \includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{lrg-6.png}\\[-0.1em]
+      {\scriptsize 多点收藏后生成可走路线}
+    \end{column}
+  \end{columns}
+  \hciprinciple{系统状态可见性与空间映射：地点、范围、顺序和步行成本都保留在同一张地图里。}
+\end{frame}
+
+\begin{frame}{设计依据：从选择过载到可行动建议}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \begin{block}{信息组织}
+        \begin{itemize}
+          \item 首层优先展示图片、名称、距离、评分等扫读线索
+          \item 卡片边框、留白和标签让每个地点保持清楚的边界
+          \item 分类、排序和半径把大量 POI 缩小到用户真正愿意比较的范围
+        \end{itemize}
+      \end{block}
+      \begin{block}{状态与控制}
+        \begin{itemize}
+          \item 当前站点、地点数量、排序方式和半径持续可见
+          \item 推荐、收藏、加入路线和扩大范围均由用户确认
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.54\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{lrg-2.png}\\[-0.1em]
+      {\scriptsize 真实界面中状态、筛选和地图反馈同时可见}
+    \end{column}
+  \end{columns}
+  \hciprinciple{降低认知负荷：把杂乱的周边信息整理成能筛选、能比较、能直接出发的选择。}
 \end{frame}
 
 \begin{frame}{第四部分：用户关怀}
