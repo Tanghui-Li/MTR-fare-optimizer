@@ -7,7 +7,7 @@
 \usepackage{tabularx}
 \usepackage{qrcode}
 
-\usetheme{default}
+\usetheme{Berlin}
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{footline}[frame number]
 \setbeamersize{text margin left=8mm,text margin right=8mm}
@@ -80,7 +80,7 @@
           \item 李堂辉：项目背景与路由算法
           \item 高胜寒：界面设计、移动端适配、线路显示
           \item 郎若谷：站点周边景点与美食推荐
-          \item 樊祺：无障碍设施信息与用户体验调研
+          \item 樊祺：无障碍设施信息与用户偏好推荐
         \end{itemize}
       \end{block}
       \hciprinciple{以用户为中心设计：从真实任务出发组织信息架构和交互流程。}
@@ -393,103 +393,85 @@
 \begin{frame}{第四部分：用户关怀}
   \speakerline{樊祺}{2350262}
   \begin{block}{负责内容}
-    无障碍设施信息、无障碍友好路线偏好、用户体验调研与竞品分析。
+    无障碍设施信息、无障碍友好路线偏好、智能推荐解释与票价比较。
   \end{block}
   \hciprinciple{通用设计与包容性设计：让不同能力、语言和出行偏好的用户都能完成任务。}
 \end{frame}
 
-\begin{frame}{无障碍设施：从“能到达”到“适合我到达”}
+\begin{frame}{无障碍高亮：先筛选，再判断}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.49\textwidth}
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{accessibility-filter.png}
+    \begin{column}{0.58\textwidth}
+      \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{accessibility-filter.png}
     \end{column}
-    \begin{column}{0.49\textwidth}
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{accessibility-popup.png}
+    \begin{column}{0.38\textwidth}
+      \begin{block}{截图中的功能}
+        \begin{itemize}
+          \item 顶部提供“无障碍高亮”开关，并显示当前筛选条件数量。
+          \item 弹层说明“只高亮地图上的车站，不会改变线路计算”。
+          \item 当前条件下列出 29 个符合条件车站，用户可先判断可达性。
+        \end{itemize}
+      \end{block}
+      \hciprinciple{尼尔森启发式“系统状态可见性”：筛选状态、结果数量和作用范围直接显示。}
     \end{column}
   \end{columns}
-  \vspace{0.3em}
-  \small
-  地图可按无障碍条件高亮车站；车站详情展示出入口、电梯、轮椅设施、视听辅助等信息。
-  \hciprinciple{WCAG 可感知原则与通用设计：把无障碍设施显式呈现，减少出行前的不确定性。}
 \end{frame}
 
-\begin{frame}{用户偏好：把“麻烦程度”显式交给用户}
+\begin{frame}{站点设施详情：把设施拆成可检查项目}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{路线偏好}
+    \begin{column}{0.56\textwidth}
+      \includegraphics[width=\linewidth,height=0.54\textheight,keepaspectratio]{accessibility-popup.png}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{block}{荃湾站弹窗内容}
         \begin{itemize}
-          \item 优化目标：最低票价 / 均衡 / 更快
+          \item 无障碍设施与出入口设施分组展示。
+          \item 行动不便设施：闸机、踏板、多用途空间等。
+          \item 视觉受损设施：触觉图、障碍物改装、引导径等。
+          \item 设施逐项用勾选标记呈现，便于快速确认。
+        \end{itemize}
+      \end{block}
+      \hciprinciple{WCAG 可感知原则：设施信息应可读、可检查。}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{路线偏好：把“麻烦程度”显式交给用户}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \includegraphics[width=\linewidth,height=0.54\textheight,keepaspectratio]{route-recommendation-fanqi.png}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{block}{截图中的控制项}
+        \begin{itemize}
+          \item 智能路线偏好：最低票价 / 均衡 / 更快
           \item 无障碍策略：关闭 / 优先 / 必须
-          \item 最多出闸次数
-          \item 最低节省金额阈值
+          \item 最多出闸次数：限制额外操作
+          \item 最少节省：过滤收益过小的方案
+          \item 结果卡展示耗时、出入闸次数和无障碍匹配度
         \end{itemize}
       \end{block}
-    \end{column}
-    \begin{column}{0.49\textwidth}
-      \begin{block}{推荐解释}
-        \begin{itemize}
-          \item 推荐票价、最低票价、一般票价分开展示
-          \item 展示预计耗时、出入闸次数、无障碍匹配度
-          \item 当省钱收益不足时回退到更稳妥路线
-        \end{itemize}
-      \end{block}
+      \hciprinciple{用户控制与自由：目标和约束由用户设定。}
     \end{column}
   \end{columns}
-  \hciprinciple{尼尔森启发式“用户控制与自由”“错误预防”：让用户定义可接受的出闸和节省阈值。}
 \end{frame}
 
-\begin{frame}{用户体验调研：小样本可用性测试}
+\begin{frame}{票价比较：推荐理由需要可核对}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.50\textwidth}
-      \begin{block}{测试设置}
-        \begin{itemize}
-          \item 6 名同学，3 人桌面端、3 人移动端
-          \item 任务：罗湖到屯门、解释粉岭分段省钱原因
-          \item 任务：找到出闸再入闸点、筛选无障碍车站
-          \item 指标：完成率、耗时、错误点、主观满意度
-        \end{itemize}
-      \end{block}
+    \begin{column}{0.56\textwidth}
+      \includegraphics[width=\linewidth,height=0.56\textheight,keepaspectratio]{route-savings-fanqi.png}
     \end{column}
-    \begin{column}{0.46\textwidth}
-      \begin{block}{结果与改进点}
+    \begin{column}{0.40\textwidth}
+      \begin{block}{截图中的解释信息}
         \begin{itemize}
-          \item 路线规划完成率：6/6；平均耗时约 58 秒
-          \item 5/6 能正确解释“粉岭出闸再入闸”省钱原因
-          \item 4/6 首次能独立找到无障碍筛选入口
-          \item 平均满意度：4.3/5；主要建议是加强首次引导
+          \item “你省下了 HK\$47.0”直接说明收益。
+          \item 最低票价、推荐票价、一般票价分开展示。
+          \item 出入闸次数和推荐路线预计耗时与价格放在同一组卡片。
+          \item 路线卡提示“请按路线卡在标示车站出闸再入闸”。
         \end{itemize}
       \end{block}
+      \hciprinciple{尼尔森启发式“识别优于回忆”：用户可直接核对金额、次数和操作点。}
     \end{column}
   \end{columns}
-  \hciprinciple{可用性测试：用任务完成率、耗时、错误和满意度验证界面是否真的可用。}
-\end{frame}
-
-\begin{frame}{调研结论与后续改进}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.48\textwidth}
-      \begin{block}{调研结论}
-        \begin{itemize}
-          \item 路线规划任务完成率高，说明主流程可用
-          \item 粉岭分段案例能帮助用户理解票价优化
-          \item 地图高亮能降低寻找出闸点和设施点的成本
-          \item 无障碍筛选入口仍需要更明显的首次提示
-        \end{itemize}
-      \end{block}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{block}{后续改进}
-        \begin{itemize}
-          \item 在首次使用时解释“出闸再入闸”和“最低节省金额”
-          \item 给无障碍筛选和图层按钮增加更明确的视觉提示
-          \item 在路线卡片中继续突出费用、次数和设施匹配度
-          \item 扩展更多真实用户样本，验证老人、游客和行动不便用户场景
-        \end{itemize}
-      \end{block}
-    \end{column}
-  \end{columns}
-  \vspace{0.6em}
-  \centering
-  \Large \textcolor{MTRBlue}{欢迎访问 GitHub 开源项目与在线部署版本继续体验。}
 \end{frame}
 
 \end{document}
