@@ -35,3 +35,6 @@ env/
 token.env
 *.env
 .env
+
+docs/fanqi/HCI汇报.pptx
+docs/fanqi/.~lock*
