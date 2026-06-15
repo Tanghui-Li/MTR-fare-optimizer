@@ -62,6 +62,7 @@
 \end{frame}
 
 \begin{frame}{汇报结构与任务主线}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.50\textwidth}
       \begin{block}{从粉岭站问题开始}
@@ -70,6 +71,7 @@
       \begin{itemize}
         \item 这个结果难以由一条固定规则推导，需要查询票价矩阵并枚举候选断点。
         \item 主流地图软件通常按时间、换乘和步行距离规划路线，本项目补齐按港铁票价优化的查询入口。
+        \item 老人、儿童和价格敏感用户可能愿意多花一点时间，换取几港币的节省。
         \item 系统同时解释“怎么走”“多少钱”“为什么这样走”。
       \end{itemize}
     \end{column}
@@ -91,18 +93,18 @@
 \end{frame}
 
 \section{背景与算法}
-\begin{frame}{项目背景与设计目标}
+\begin{frame}{现状：票价优化是一个真实用户任务}
   \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.56\textwidth}
       \begin{itemize}\setlength{\itemsep}{0.15em}
-        \item 香港交通网络复杂，直观路线的票价可能高于分段出入闸方案。
-        \item 用户真正关心的是：花多少钱、怎么走、在哪里换乘、是否需要额外出入闸。
-        \item 系统把票价查询、断点枚举和总价比较外化到界面，降低用户脑内试算负担。
-        \item 除地图上的线路走向几何校正外，站点、票价、设施和实时交通数据均基于香港政府开放资料 data.gov.hk。
+        \item 港铁票价受区间、过境站和换乘组合影响，不能简单按距离或站数判断。
+        \item 主流地图软件通常优化时间、换乘和步行距离，不提供按港铁票价筛选。
+        \item 用户真正需要比较票价、时间、出入闸次数和执行难度。
+        \item 系统把票价查询、断点枚举和总价比较外化到界面，降低脑内试算负担。
         \item 项目已开源在 GitHub：\href{https://github.com/Tanghui-Li/MTR-fare-optimizer/}{Tanghui-Li/MTR-fare-optimizer}，并部署在 \href{https://mtr-optimizer.shgao.top}{mtr-optimizer.shgao.top}。
       \end{itemize}
-      \hciprinciple{分布式认知与概念模型：系统承担复杂计算，用真实站点、票价和出入闸概念对齐用户直觉与港铁票价模型。}
+      \hciprinciple{以用户为中心设计与分布式认知：从真实省钱任务出发，把复杂计算交给系统。}
     \end{column}
     \begin{column}{0.40\textwidth}
       \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{desktop-map-overview.png}
@@ -121,6 +123,9 @@
           \item 车站无障碍设施与实时交通接口
         \end{itemize}
       \end{block}
+      \begin{block}{数据边界}
+        除线路走向几何校正外，站点、票价、设施和实时交通数据均来自香港政府开放资料。
+      \end{block}
     \end{column}
     \begin{column}{0.50\textwidth}
       \begin{block}{统一建模}
@@ -136,32 +141,32 @@
       \end{center}
     \end{column}
   \end{columns}
-  \hciprinciple{尼尔森启发式“系统状态可见性”：数据来源、建模过程和输出规则需要让用户可感知。}
+  \hciprinciple{系统与现实世界匹配：界面使用真实站点、线路、票价和设施，减少用户从系统到现实的转换成本。}
 \end{frame}
 
-\begin{frame}{路由算法：票价优化超过最短路}
+\begin{frame}{路由算法：从交通图到候选断点}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.48\textwidth}
-      \begin{block}{计算流程}
+      \begin{block}{统一交通图}
         \begin{itemize}
-          \item 输入：起点、终点、票种
-          \item 构图：按票种选择对应票价矩阵
-          \item 搜索：计算普通路线与分段票价优化路线
-          \item 输出：总票价、分段路线、站点序列、线路标签、出入闸说明
+          \item 节点：港铁站、轻铁站、巴士站、换乘点
+          \item 边：乘车、换乘、出闸再入闸、接驳
+          \item 权重：票价、时间、换乘和操作复杂度
         \end{itemize}
       \end{block}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \begin{block}{为什么要分段展示}
+      \begin{block}{票价优化搜索}
         \begin{itemize}
-          \item 票价优化可能要求用户出闸再入闸
-          \item 单一金额无法说明可执行步骤
-          \item 分段卡片把“算法结果”转化为“用户能照做、能核对的步骤”
+          \item 输入起点、终点和票种，先计算常规路线。
+          \item 枚举候选断点，计算两段票价之和。
+          \item 与常规路线比较，保留最低票价和可执行步骤。
+          \item 输出总价、站点序列、线路标签和出入闸说明。
         \end{itemize}
       \end{block}
     \end{column}
   \end{columns}
-  \hciprinciple{识别优于回忆与分布式认知：把站点序列、出入闸动作和价格比较放到界面上，避免用户记忆隐藏规则。}
+  \hciprinciple{识别优于回忆：用户直接看到断点、分段和价格比较，不需要记忆隐藏票价规则。}
 \end{frame}
 
 \begin{frame}{回到粉岭：算法正确性与可解释性}
