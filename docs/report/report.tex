@@ -1,0 +1,844 @@
+\documentclass[UTF8,a4paper,11pt]{ctexart}
+
+\usepackage[a4paper,margin=2.0cm]{geometry}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit}
+
+\graphicspath{{docs/slides/screenshots/}{docs/slides/assets/}{docs/report/}}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black
+}
+
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{2em}
+\setlist[itemize]{leftmargin=2em,itemsep=0.15em,topsep=0.2em}
+\setlist[enumerate]{leftmargin=2.4em,itemsep=0.15em,topsep=0.2em}
+\setcounter{tocdepth}{1}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\projectname}{港铁票价优化器与综合交通交互系统}
+\newcommand{\engproject}{MTR Fare Optimizer \& Transit Interface}
+\newcommand{\groupno}{第42组}
+
+\title{\bfseries \projectname\\[0.3em]\large \engproject\\[0.8em]\normalsize《人机交互导论》课程大作业报告}
+\author{\groupno}
+\date{2026年6月}
+
+\begin{document}
+\maketitle
+
+\begin{table}[H]
+  \centering
+  \caption*{\groupno 成员、分工与工作量权重}
+  \begin{tabularx}{\textwidth}{llllY}
+    \toprule
+    姓名 & 学号 & 主要分工 & 权重 & 说明 \\
+    \midrule
+    李堂辉 & 2351078 & 项目背景、数据建模、路由与票价算法 & 0.25 & 负责开放数据整理、票价优化主流程与项目统筹。 \\
+    高胜寒 & 2351837 & 界面设计、移动端适配、线路显示 & 0.25 & 负责地图与路线结果的可视化、响应式布局与交互状态。 \\
+    郎若谷 & 2351871 & 周边旅游推荐 & 0.25 & 负责站点周边景点与美食数据、筛选、收藏和路线串联。 \\
+    樊祺 & 2350262 & 用户关怀、无障碍与路线偏好 & 0.25 & 负责无障碍设施、用户偏好推荐、票价解释与多语言文案。 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\noindent
+项目开源仓库：\url{https://github.com/Tanghui-Li/MTR-fare-optimizer/}\\
+在线演示：\url{https://mtr-optimizer.shgao.top}。
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{项目摘要}
+
+\subsection{项目总体介绍}
+
+\projectname 是一个面向香港公共交通用户的交互式 Web 应用。系统以真实开放数据为基础，把港铁、机场快线、轻铁、港铁巴士、无障碍设施和站点周边兴趣点整合到同一界面中，帮助用户完成“怎么走、多少钱、为什么这样走、到站后去哪儿”的连续出行决策。
+
+项目的核心问题来自港铁票价体系的非直观性。例如从罗湖到屯门，成人八达通常规票价为 HK\$59.2；若在东铁线粉岭站出闸再入闸，总价可变为 HK\$51.5，节省 HK\$7.7。这个结果不能由一条固定规则推导，需要查询票价矩阵并枚举候选断点。主流地图软件通常优化时间、换乘和步行距离，而本项目补齐“按港铁票价优化”的查询入口。
+
+\subsection{目标用户}
+
+本项目面向以下用户：
+\begin{itemize}
+  \item 价格敏感型乘客：学生、老人、儿童陪同者或通勤者，愿意以少量时间换取票价节省。
+  \item 不熟悉香港交通的游客：需要把线路、票价、换乘和站点周边信息放在同一界面中理解。
+  \item 有特殊出行需求的用户：轮椅用户、携带大件行李者、老人、推婴儿车者，需要提前确认电梯、闸机、无障碍洗手间等设施。
+  \item 移动端出行用户：在车站或路途中临时查询路线，需要地图优先、操作路径短、反馈明确。
+\end{itemize}
+
+\subsection{项目目标}
+
+项目目标不是只给出一个“最低价格”，而是把复杂计算转化为可执行、可检查的出行方案：
+\begin{enumerate}
+  \item 自动比较常规路线与分段出入闸路线，发现潜在省钱方案。
+  \item 用地图、路线卡片和票价比较解释系统推荐，降低用户对黑箱算法的不信任。
+  \item 支持无障碍设施筛选、路线偏好和 i18n 多语言界面，扩大系统可用人群。
+  \item 提供站点周边景点与美食推荐，让应用覆盖出行后的探索任务。
+\end{enumerate}
+
+\subsection{功能模块与设计边界}
+
+项目把“路线计算”和“出行决策”分开处理：算法负责枚举候选路径和可能的出入闸断点，界面负责把候选方案组织成可比较、可筛选、可解释的结果。当前原型不实现支付、登录、实时客流预测和后端账户系统，重点展示可交互前端原型、数据组织方式和完整任务流程。
+
+\begin{table}[H]
+  \centering
+  \caption{核心功能模块}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}YY}
+    \toprule
+    模块 & 输入与处理 & 输出到用户界面 \\
+    \midrule
+    线路查询 & 用户输入起点、终点和偏好；系统在站点图上枚举路线并读取票价矩阵 & 普通路线、最低票价路线、均衡路线和更快路线 \\
+    票价优化 & 枚举可行出入闸断点，计算分段票价之和，并与直接乘车票价比较 & 节省金额、额外出闸次数、是否满足最少节省阈值 \\
+    线路显示 & 使用港铁线路颜色、站点名称、换乘关系和路线高亮呈现结果 & 地图高亮、路线步骤卡片、移动端底部结果面板 \\
+    周边旅游 & 基于站点位置读取景点和餐饮开放数据，按距离和类型聚合 & 站点周边景点、美食、距离和类别筛选 \\
+    用户关怀 & 整合无障碍设施字段、语言切换和用户反馈信息 & 无障碍筛选、设施弹窗、多语言文本与满意度评价入口 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{设计评价标准}
+
+本报告使用以下可观察标准评价设计效果：用户是否能在一次输入后得到可比较结果；路线卡片是否能解释价格差异；移动端是否能在不遮挡地图的情况下完成筛选；无障碍与周边信息是否能在同一任务流程中被调用；用户是否能识别系统当前状态并从错误输入中恢复。
+
+\section{需求设计}
+
+\subsection{需求说明}
+
+结合项目目标和前期用户调研，项目需求分为功能需求、交互需求、数据需求和运行需求。表 \ref{tab:req} 给出简要说明。
+
+\begin{table}[H]
+  \centering
+  \caption{需求说明书摘要}
+  \label{tab:req}
+  \begin{tabularx}{\textwidth}{lY}
+    \toprule
+    类别 & 需求 \\
+    \midrule
+    路线与票价 & 用户选择起终点和票种后，系统计算常规路线、最低票价路线和分段出入闸方案，并展示总价、节省金额、线路和站点序列。 \\
+    地图理解 & 地图展示港铁线路、车站、轻铁、港铁巴士、实时车辆和当前路线，高亮关键断点，帮助用户把文字结果映射到现实空间。 \\
+    无障碍支持 & 用户可筛选具备电梯、宽闸机、触觉引导径等设施的车站，并在车站详情中检查设施类别。 \\
+    用户偏好 & 用户可选择最低票价、均衡、更快等目标，并设置无障碍策略、最多出闸次数和最少节省金额。 \\
+    周边推荐 & 用户可查看站点附近景点和美食，按类别、评分、距离、半径筛选，并把兴趣点串成步行路线。 \\
+    多语言与设备 & 支持繁体中文、简体中文和英文；桌面端采用规划面板与地图并列，移动端采用地图优先和底部面板。 \\
+    运行方式 & 系统提供在线部署，也可本地安装依赖后运行开发服务器或构建静态前端。 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{详细需求与验收点}
+
+\begin{table}[H]
+  \centering
+  \caption{功能需求与验收方式}
+  \begin{tabularx}{\textwidth}{p{0.16\textwidth}YY}
+    \toprule
+    需求类别 & 需求内容 & 可观察验收点 \\
+    \midrule
+    路线查询 & 用户选择起点和终点后，系统生成至少一种可行线路，并显示站点序列、换乘位置和线路颜色 & 粉岭分段等典型样例能够得到完整步骤；换乘站在线路图中可识别 \\
+    票价优化 & 系统比较直接乘车和分段出入闸方案，筛选最低票价、均衡和更快路线 & 结果卡片显示总票价、节省金额、时间和额外出入闸次数 \\
+    偏好控制 & 用户可设置最低票价、均衡、更快、无障碍、最多出闸次数、最少节省金额等偏好 & 控件变化后结果列表同步更新；筛选条件可被清楚看见 \\
+    移动端适配 & 小屏幕下保留地图主体、搜索入口和结果摘要，避免横向滚动 & 在窄屏截图中仍能完成查询、查看路线和切换结果 \\
+    周边探索 & 用户可围绕站点查看景点、美食等周边信息，支持按类型浏览 & 周边卡片显示名称、类别、距离和关联站点 \\
+    无障碍信息 & 展示电梯、无障碍出入口、站内设施等信息，并允许把无障碍作为路线偏好 & 无障碍筛选打开后，结果说明设施条件和限制 \\
+    国际化 & 关键界面文本可通过 i18n 机制切换，降低不同语言用户的理解成本 & 搜索、筛选、结果标题和设施标签纳入翻译资源 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{非功能需求与约束}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}YY}
+    \toprule
+    维度 & 要求 & HCI 对应意义 \\
+    \midrule
+    可学习性 & 首屏直接呈现起终点输入和线路图，不要求用户先阅读说明 & 符合识别优于回忆原则，降低首次使用门槛 \\
+    效率 & 常用偏好用按钮、下拉框和数值输入表达，减少长文本填写 & 符合 Fitts 定律和 Hick 定律，减少选择时间与操作距离 \\
+    一致性 & 路线颜色、站点名称、按钮样式和结果卡片结构保持一致 & 建立稳定概念模型，减少用户在不同模块间重新学习 \\
+    可恢复性 & 输入不完整、站点无结果或筛选过严时给出明确状态提示 & 符合尼尔森启发式中的错误预防与错误恢复 \\
+    可运行性 & 前端可本地运行，也提供在线访问地址 & 满足课程演示和复现实验过程的要求 \\
+    数据可追溯 & 除线路走向信息外，数据来源集中使用香港政府开放数据 data.gov.hk & 便于解释数据来源，也便于后续替换和更新 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{需求优先级}
+
+原型开发需要在有限时间内保证核心任务可用，因此需求优先级按“是否影响主任务完成”和“是否体现用户体验价值”划分。路线查询、票价优化和结果解释属于必须实现的核心需求；移动端适配、无障碍设施和周边推荐是完整用户体验的重要组成；实时车辆和收藏等功能用于展示扩展性。
+
+\begin{table}[H]
+  \centering
+  \caption{需求优先级与取舍}
+  \begin{tabularx}{\textwidth}{p{0.16\textwidth}p{0.2\textwidth}YY}
+    \toprule
+    优先级 & 需求 & 理由 & 当前实现状态 \\
+    \midrule
+    必须 & 起终点查询、票价矩阵读取、分段断点枚举 & 没有这些功能，项目无法回答“怎样按港铁票价优化路线”这一核心问题 & 已实现并在路线卡片中展示票价差异 \\
+    必须 & 路线可解释性 & 用户需要知道在哪个站出入闸、能省多少钱、会增加多少操作 & 已通过结果卡片、地图高亮和推荐理由呈现 \\
+    应有 & 移动端布局 & 真实出行查询常发生在手机上，触屏操作和小屏阅读是主要场景 & 已实现地图优先和底部面板 \\
+    应有 & 无障碍设施 & 课程强调面向不同用户的交互，设施信息直接影响可达性 & 已实现筛选和站点弹窗 \\
+    应有 & 周边旅游推荐 & 老师明确要求覆盖站点周边景点与美食，也符合游客画像 & 已实现站点周边卡片和筛选 \\
+    可扩展 & 实时车辆、收藏、更多票种 & 能提升真实使用价值，但不影响主线 demo 完成 & 已保留数据和界面扩展位置 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{需求框架图}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    node distance=7mm and 10mm,
+    box/.style={draw, rounded corners, align=center, minimum width=30mm, minimum height=8mm, fill=blue!5},
+    core/.style={draw, rounded corners, align=center, minimum width=38mm, minimum height=11mm, fill=blue!14, thick},
+    arrow/.style={-{Latex[length=2mm]}, thick}
+  ]
+    \node[core] (user) {用户出行任务\\路线、票价、可达性、周边};
+    \node[box, below left=of user] (fare) {票价优化\\断点枚举};
+    \node[box, below=of user] (map) {地图理解\\线路与站点};
+    \node[box, below right=of user] (access) {无障碍与偏好\\多目标推荐};
+    \node[box, below=of map] (nearby) {周边探索\\景点与美食};
+    \node[box, below=of fare] (data) {开放数据\\data.gov.hk};
+    \node[box, below=of access] (ui) {交互界面\\桌面/移动/i18n};
+    \draw[arrow] (user) -- (fare);
+    \draw[arrow] (user) -- (map);
+    \draw[arrow] (user) -- (access);
+    \draw[arrow] (map) -- (nearby);
+    \draw[arrow] (data) -- (fare);
+    \draw[arrow] (data) -- (map);
+    \draw[arrow] (access) -- (ui);
+    \draw[arrow] (nearby) -- (ui);
+  \end{tikzpicture}
+  \caption{项目需求框架}
+  \label{fig:req-framework}
+\end{figure}
+
+\subsection{数据来源与约束}
+
+除地图线路走向的几何校正外，本项目主要使用香港政府开放资料与本地预处理数据。关键数据包括港铁线路与站点 CSV、成人八达通/单程票票价矩阵、机场快线票价、轻铁票价、港铁巴士线路与票价、车站无障碍设施、实时交通接口以及站点周边开放兴趣点数据。数据约束主要有三点：第一，不同交通系统的站点编号和票价表格式不同；第二，票价优化需要处理“出闸再入闸”这种非连续乘车行为；第三，无障碍设施和周边推荐需要在不增加用户负担的前提下呈现。
+
+\begin{table}[H]
+  \centering
+  \caption{数据对象与界面用途}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}YY}
+    \toprule
+    数据对象 & 主要字段 & 界面用途 \\
+    \midrule
+    站点数据 & 站点名称、线路、位置、换乘关系 & 起终点输入、站点匹配、线路图展示 \\
+    票价矩阵 & 起点、终点、成人/优惠票价或对应票价字段 & 直接票价查询、分段票价比较、节省金额计算 \\
+    设施数据 & 站点、出入口、电梯、无障碍设施、服务说明 & 无障碍筛选、设施弹窗、用户关怀模块 \\
+    周边 POI & 名称、类别、位置、所属区域、简介 & 景点美食推荐、站点周边探索 \\
+    界面文案 & 语言键、中文、英文或其他语言文本 & i18n 切换、一致文案管理 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{用户研究}
+
+\subsection{研究方法}
+
+我们结合问卷调查、情景访谈和可用性观察获得用户需求：
+\begin{itemize}
+  \item 问卷调查：收集 12 名同学和访港经历用户对票价、时间、换乘、无障碍和周边推荐的关注程度。
+  \item 半结构访谈：对 4 名用户进行单独访谈，讨论“愿意为了省钱多做哪些操作”“如何判断车站是否方便”等问题。
+  \item 小样本可用性测试：邀请 6 名同学完成路线规划、粉岭分段解释、无障碍筛选、移动端面板操作和周边探索任务。
+\end{itemize}
+
+\begin{table}[H]
+  \centering
+  \caption{用户研究执行方案}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}YY}
+    \toprule
+    方法 & 执行内容 & 产出 \\
+    \midrule
+    问卷调查 & 围绕“是否关注票价差异”“是否愿意为节省票价多走路或多出闸”“是否需要无障碍和周边信息”收集选择题与开放回答 & 用户类型分组、价格敏感度、常见信息缺口 \\
+    情景访谈 & 让受访者描述一次跨区乘港铁的决策过程，追问使用过的地图软件、票价来源和换乘顾虑 & 真实任务情境、痛点和信息查找顺序 \\
+    焦点讨论 & 小组内部模拟游客、老人、学生和通勤者四类角色，对同一条路线进行方案比较 & 功能优先级、界面措辞和结果排序规则 \\
+    任务走查 & 观察受访者完成起终点查询、最低票价筛选、无障碍筛选、周边浏览四个任务 & 误操作位置、停顿点和界面理解问题 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{调研结论}
+
+调研得到以下主要结论：
+\begin{enumerate}
+  \item 用户不会天然信任“更便宜”的推荐。若系统只显示金额，用户无法确认在哪里出闸、是否绕路、是否值得。
+  \item 不同用户对“最优”的定义不同。学生和老人更重视省钱，通勤者更重视时间，携带行李或行动不便用户更重视无障碍设施。
+  \item 地图和列表需要联动。交通路线和周边探索都是空间任务，用户需要在文字步骤和地图位置之间反复验证。
+  \item 首次使用时，无障碍筛选和图层控制需要明确说明作用范围，否则用户可能误以为筛选会自动改变路线。
+\end{enumerate}
+
+\subsection{用户画像}
+
+\begin{table}[H]
+  \centering
+  \caption{典型用户画像}
+  \begin{tabularx}{\textwidth}{lY}
+    \toprule
+    用户 & 行为特征与需求 \\
+    \midrule
+    价格敏感学生 & 频繁跨区出行，愿意多花 5--10 分钟节省几港币，需要明确节省金额和额外出闸次数。 \\
+    初到香港游客 & 不熟悉港铁线路和站点周边，需要路线、地图、价格和周边推荐集中呈现。 \\
+    携带行李乘客 & 更关心电梯、宽闸机、少换乘和少出闸，希望提前判断路线是否方便。 \\
+    移动端临场用户 & 在车站内快速操作，屏幕小且注意力有限，需要大按钮、底部面板和明显状态反馈。 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{问卷与访谈要点}
+
+问卷题目围绕课程中反复强调的“用户目标、任务环境、交互约束”展开。核心题目包括：是否知道同一段港铁行程可能存在不同票价；在节省 2 至 5 港币时是否愿意额外出闸一次；路线规划时最先看票价、时间、换乘次数还是步行距离；是否需要知道电梯、无障碍出入口和站点周边信息；是否在手机上查看路线时遇到过地图遮挡或结果过长的问题。
+
+访谈得到的典型发现包括三类。第一，用户通常把主流地图软件视为“到达时间工具”，价格信息只作为次要参考，且很少提供按票价排序的入口。第二，老人、儿童同行家庭和学生更可能接受“多花几分钟换取小额节省”，但他们需要明确知道多出的操作成本，例如是否要额外出闸、是否会走很远。第三，行动不便用户不只关心最终是否可达，还关心换乘路径中是否存在电梯、扶梯、长距离步行和站内绕行。
+
+\subsection{用户旅程}
+
+\begin{table}[H]
+  \centering
+  \caption{典型用户旅程：从粉岭站出发寻找更低票价}
+  \begin{tabularx}{\textwidth}{p{0.13\textwidth}YYY}
+    \toprule
+    阶段 & 用户行为 & 信息需求 & 设计回应 \\
+    \midrule
+    产生需求 & 用户准备从东铁线粉岭站出发，发现直接票价偏高 & 想知道是否存在便宜路线，且不希望手动查表 & 首屏提供起终点输入，并保留在线地址便于现场访问 \\
+    比较方案 & 用户查看最低票价、均衡、更快三类结果 & 需要同时看到价格、时间、换乘和额外出闸次数 & 结果卡片并列展示关键指标，避免只给单一答案 \\
+    判断成本 & 用户考虑是否值得额外出闸或绕行 & 需要知道节省金额能否覆盖多出的操作负担 & 提供最少节省和最多出闸次数筛选 \\
+    补充确认 & 用户关注站内设施、周边目的地和语言理解 & 需要无障碍、周边旅游和多语言信息 & 无障碍设施弹窗、周边推荐和 i18n 文本资源合并到同一系统 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{概念设计}
+
+\subsection{核心概念模型}
+
+系统的概念模型围绕“用户可理解的出行方案”组织，而不是围绕底层票价表组织。用户看到的对象包括起点、终点、票种、路线方案、出入闸断点、节省金额、无障碍设施和周边地点。系统内部则将这些对象映射为交通图节点、边、票价矩阵、候选断点和推荐评分。
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    node distance=6mm and 8mm,
+    box/.style={draw, rounded corners, align=center, minimum width=28mm, minimum height=8mm, fill=gray!8},
+    user/.style={draw, rounded corners, align=center, minimum width=28mm, minimum height=8mm, fill=green!10},
+    sys/.style={draw, rounded corners, align=center, minimum width=30mm, minimum height=8mm, fill=orange!10},
+    arrow/.style={-{Latex[length=2mm]}, thick}
+  ]
+    \node[user] (goal) {用户目标\\省钱/省时/少麻烦};
+    \node[user, below=of goal] (input) {起点、终点、票种\\偏好与约束};
+    \node[sys, right=of input] (graph) {统一交通图\\票价矩阵};
+    \node[sys, right=of graph] (search) {常规路线\\候选断点枚举};
+    \node[user, below=of search] (result) {可解释路线\\价格、步骤、地图};
+    \node[user, below=of input] (decision) {用户判断\\是否采用/调整};
+    \draw[arrow] (goal) -- (input);
+    \draw[arrow] (input) -- (graph);
+    \draw[arrow] (graph) -- (search);
+    \draw[arrow] (search) -- (result);
+    \draw[arrow] (result) -- (decision);
+    \draw[arrow] (decision) -- (input);
+  \end{tikzpicture}
+  \caption{从用户目标到系统计算的概念模型}
+\end{figure}
+
+\subsection{采用的 HCI 原则}
+
+项目设计中主要使用以下 HCI 原则：
+\begin{itemize}
+  \item 系统与现实世界匹配：使用真实站点、线路、票价、设施和地图，减少用户从界面到现实交通环境的转换成本。
+  \item 分布式认知：将票价矩阵查询、断点枚举和总价比较外化到系统，降低用户脑内试算负担。
+  \item 识别优于回忆：路线卡片直接列出站点序列、线路标签和出入闸动作，用户不需要记住隐藏票价规则。
+  \item 系统状态可见性：输入草稿、已应用路线、筛选条件、结果数量、推荐理由均明确显示。
+  \item 用户控制与自由：用户可以选择路线目标、无障碍策略、图层开关、周边筛选半径和收藏。
+  \item 包容性设计：无障碍设施、移动端布局和 i18n 多语言界面让更多用户可以完成同一任务。
+\end{itemize}
+
+\begin{table}[H]
+  \centering
+  \caption{HCI 原则与设计实现对应}
+  \begin{tabularx}{\textwidth}{p{0.28\textwidth}Y}
+    \toprule
+    HCI 原则 & 项目实现 \\
+    \midrule
+    感知与格式塔原则：接近性、相似性、连续性、主体-背景 & 同一方案的票价、时间、换乘、节省额放在同一卡片内；线路用连续色带呈现；地图和结果面板通过层级对比区分主次 \\
+    概念模型与分布式认知 & 将港铁网络抽象为“站点-线路-换乘-票价矩阵”四类对象，用户在界面上操作这些对象，不需要理解内部图搜索细节 \\
+    工作记忆限制与识别优于回忆 & 控件保留当前筛选值，结果卡片展示关键指标，减少用户记住多条路线价格和换乘方式的负担 \\
+    一致性、导航设计、流程连续性 & 起终点输入、路线结果、地图高亮、周边详情按同一任务链组织；桌面端与移动端使用同一信息结构 \\
+    Fitts 定律 & 常用偏好使用大按钮和下拉控件，移动端底部面板靠近拇指操作区，减少点击距离和误触 \\
+    Hick 定律 & 把路线偏好压缩为最低票价、均衡、更快三个主选项，其余条件放入辅助筛选，避免一次暴露过多选择 \\
+    系统状态可见性 & 查询中、无结果、筛选过严和路线切换等状态在界面中显式呈现，减少用户等待和猜测 \\
+    尼尔森启发式：错误预防、错误恢复 & 起终点为空、站名无法匹配、筛选条件过严时提示原因，并允许用户修改筛选后继续任务 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{原则到界面的转化}
+
+HCI 原则在本项目中转化为界面结构和交互规则。以粉岭站出发的票价优化任务为例，系统不要求用户理解“为什么某个断点更便宜”的全部票价规则，而是把计算结果外化为“节省金额、额外出闸次数、路线步骤”，这体现了分布式认知。路线偏好区只保留三个主按钮，符合 Hick 定律；移动端把主要操作放到底部，符合 Fitts 定律；线路颜色和站点顺序保持连续，则使用了格式塔的连续性和相似性。
+
+\section{任务分析}
+
+\subsection{用例分析}
+
+\begin{table}[H]
+  \centering
+  \caption{核心用例}
+  \begin{tabularx}{\textwidth}{lY}
+    \toprule
+    用例 & 说明 \\
+    \midrule
+    查询最低票价路线 & 用户输入起终点和票种，系统返回常规路线与票价优化路线。 \\
+    理解分段出入闸 & 用户查看分段卡片、地图断点和节省金额，判断是否照做。 \\
+    调整路线偏好 & 用户设置最低票价、均衡、更快、无障碍要求、最多出闸和最少节省金额。 \\
+    筛选无障碍车站 & 用户打开无障碍高亮，选择设施条件，查看符合条件车站和详情。 \\
+    移动端临场操作 & 用户在手机上展开底部面板、修改路线、收起面板查看地图。 \\
+    探索站点周边 & 用户点开站点周边面板，筛选美食/景点，收藏并串成步行路线。 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{分层任务分析}
+
+以“寻找更低港铁票价”为主任务，可以拆解为五层动作。该分解用于检查界面是否覆盖关键步骤，也用于确认每一步是否有明确反馈。
+
+\begin{table}[H]
+  \centering
+  \caption{HTA 分层任务分析}
+  \begin{tabularx}{\textwidth}{p{0.12\textwidth}YY}
+    \toprule
+    编号 & 子任务 & 界面与反馈 \\
+    \midrule
+    0 & 完成一次票价优化查询 & 首页地图、搜索栏、路线结果面板共同完成 \\
+    1 & 指定出发站和到达站 & 站点输入框提供站名识别，输入不完整时保持可恢复状态 \\
+    2 & 选择偏好 & 最低票价、均衡、更快作为主偏好；无障碍、最多出闸、最少节省作为约束 \\
+    3 & 查看候选路线 & 路线卡片显示票价、节省、时间、换乘和出闸次数；地图同步高亮 \\
+    4 & 判断是否采用方案 & 用户比较节省金额和操作成本，决定直接乘车或按推荐断点分段乘车 \\
+    5 & 查看补充信息 & 需要时打开无障碍设施、站点周边景点和美食推荐 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{用户任务序列}
+
+以“罗湖到屯门，尝试在粉岭分段节省票价”为例，用户任务序列如下：
+\begin{enumerate}
+  \item 打开系统，确认当前语言和地图区域。
+  \item 选择票种、起点“罗湖”和终点“屯门”。
+  \item 点击规划，系统计算常规路线和分段候选路线。
+  \item 查看票价比较，确认常规 HK\$59.2 与分段 HK\$51.5 的差异。
+  \item 查看路线卡片，确认需在粉岭站出闸再入闸。
+  \item 在地图上确认粉岭站位置和线路走向。
+  \item 若用户携带行李或行动不便，打开无障碍筛选确认相关站点设施。
+  \item 根据节省金额、时间和麻烦程度决定采用路线或调整偏好。
+\end{enumerate}
+
+\subsection{顺序分析}
+
+用户完成一次查询的顺序通常为：输入起点和终点，系统返回默认路线；用户切换到最低票价或均衡偏好；系统重新排序路线并显示节省金额；用户查看额外出闸次数和换乘步骤；若路线过长或设施不确定，用户再打开无障碍与周边信息。这个顺序说明项目的交互不是单次“搜索-显示”，而是一个持续比较和修正的过程，因此界面需要保留已选条件和当前路线，避免用户在反复筛选时丢失上下文。
+
+\subsection{故事情节分析}
+
+典型场景为：一名学生从罗湖前往屯门，地图软件给出最快路线，但票价较高。用户打开本项目后发现粉岭分段可节省 HK\$7.7。系统没有只给出“更便宜”三个字，而是展示常规票价、分段票价、出闸再入闸站点和地图位置。用户确认该操作可接受后采用路线。如果同伴携带行李，用户可进一步检查粉岭和目的站是否有电梯或宽闸机。这一故事体现了“价格、空间、可达性和操作复杂度”共同构成真实出行决策。
+
+\section{交互流程与界面设计}
+
+\subsection{整体交互流程}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    node distance=7mm,
+    box/.style={draw, rounded corners, align=center, minimum width=33mm, minimum height=8mm, fill=blue!5},
+    decision/.style={draw, diamond, aspect=2.2, align=center, fill=yellow!10},
+    arrow/.style={-{Latex[length=2mm]}, thick}
+  ]
+    \node[box] (start) {打开应用};
+    \node[box, below=of start] (input) {选择起点、终点、票种};
+    \node[box, below=of input] (pref) {设置偏好\\票价/时间/无障碍};
+    \node[box, below=of pref] (calc) {计算常规路线\\枚举断点};
+    \node[decision, below=of calc] (ok) {结果是否\\符合需求};
+    \node[box, below left=of ok] (adjust) {调整输入或约束};
+    \node[box, below right=of ok] (use) {查看路线卡片\\按步骤出行};
+    \node[box, below=of use] (nearby) {到站后探索周边};
+    \draw[arrow] (start) -- (input);
+    \draw[arrow] (input) -- (pref);
+    \draw[arrow] (pref) -- (calc);
+    \draw[arrow] (calc) -- (ok);
+    \draw[arrow] (ok) -- node[left]{否} (adjust);
+    \draw[arrow] (adjust) |- (input);
+    \draw[arrow] (ok) -- node[right]{是} (use);
+    \draw[arrow] (use) -- (nearby);
+  \end{tikzpicture}
+  \caption{主要交互流程}
+\end{figure}
+
+\subsection{界面结构设计}
+
+桌面端采用左侧控制面板与右侧地图并列的结构。左侧负责输入、路线结果和偏好设置，右侧负责真实空间理解。移动端采用地图优先和底部面板，用户可以展开面板编辑路线，也可以收起面板查看地图。这种设计符合 Fitts 定律和情境适配原则：移动端高频控件需要在拇指容易触达的位置，同时保留地图作为出行场景的主要信息源。
+
+\begin{table}[H]
+  \centering
+  \caption{主要界面设计依据}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}YY}
+    \toprule
+    界面 & 设计要点 & HCI 原则 \\
+    \midrule
+    首页地图 & 使用线路图作为主要背景，搜索和筛选覆盖在可见区域内 & 主体-背景、概念模型、系统状态可见性 \\
+    路线结果卡片 & 把票价、时间、换乘、节省额、出闸次数放在同一视觉组 & 接近性、识别优于回忆、分布式认知 \\
+    智能路线偏好 & 三个主按钮对应低价、均衡、快速，其他条件作为细化筛选 & Hick 定律、渐进呈现 \\
+    移动端底部面板 & 将主要操作放在屏幕下方，保持地图上下文 & Fitts 定律、流程连续性 \\
+    周边页面 & 围绕站点呈现景点和餐饮，减少用户另开地图软件查找 & 用户中心设计、任务整合 \\
+    无障碍弹窗 & 在当前任务中呈现设施信息，不打断路线比较 & 错误预防、可见性、可恢复性 \\
+    语言切换 & 文案进入 i18n 资源，保证不同语言下控件含义一致 & 一致性、可理解性 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{交互状态与反馈}
+
+系统状态可见性要求界面持续说明当前进展。项目把状态反馈分为输入状态、计算状态、结果状态和异常状态四类，目的是让用户知道“系统当前是否理解我的输入、是否正在计算、为什么没有结果、下一步能做什么”。
+
+\begin{table}[H]
+  \centering
+  \caption{交互状态反馈设计}
+  \begin{tabularx}{\textwidth}{p{0.17\textwidth}YY}
+    \toprule
+    状态 & 触发条件 & 界面反馈 \\
+    \midrule
+    输入未完成 & 起点或终点为空、站名未匹配 & 保留输入框状态，不生成错误路线，提示用户补全站点 \\
+    查询进行中 & 用户改变起终点或偏好后重新计算 & 保持旧结果可见，同时更新当前路线结果，避免界面突然空白 \\
+    结果正常 & 找到常规路线和优化路线 & 结果卡片显示票价、时间、换乘、出闸次数和推荐理由 \\
+    筛选过严 & 最少节省金额过高或最多出闸次数过低 & 告知当前条件下没有匹配方案，并允许用户放宽条件 \\
+    图层切换 & 用户打开无障碍或周边图层 & 地图元素立即变化，控制按钮保持选中状态 \\
+    移动端展开 & 用户拖动或点击底部面板 & 面板展开时保留地图上下文，收起后仍能看见当前路线 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.25\textheight,keepaspectratio]{desktop-map-overview.png}
+    \caption*{桌面端：规划面板与地图并列}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.25\textheight,keepaspectratio]{mobile-overview.png}
+    \caption*{移动端：地图优先与底部面板}
+  \end{minipage}
+  \caption{桌面与移动端界面结构}
+\end{figure}
+
+\subsection{关键交互步骤截图}
+
+图 \ref{fig:screens-1} 和图 \ref{fig:screens-2} 展示主流程中的关键交互步骤。每一步都对应一个用户目标，并通过可见状态或操作反馈帮助用户继续下一步。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{route-result-desktop.png}
+    \caption*{步骤 1：查看路线结果与分段说明}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{route-savings-fanqi.png}
+    \caption*{步骤 2：核对节省金额、推荐票价和常规票价}
+  \end{minipage}
+
+  \vspace{0.8em}
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{route-recommendation-fanqi.png}
+    \caption*{步骤 3：设置路线目标、无障碍策略和节省阈值}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{accessibility-filter.png}
+    \caption*{步骤 4：打开无障碍高亮并查看符合条件车站}
+  \end{minipage}
+  \caption{路线规划与用户关怀相关交互步骤}
+  \label{fig:screens-1}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{accessibility-popup.png}
+    \caption*{步骤 5：进入车站弹窗，逐项检查设施}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{lrg-2.png}
+    \caption*{步骤 6：查看站点周边景点与美食}
+  \end{minipage}
+  \caption{无障碍设施与周边探索交互步骤}
+  \label{fig:screens-2}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{mobile-narrow.png}
+    \caption*{窄屏状态：结果面板和地图保持同一任务上下文}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{lrg-1.png}
+    \caption*{周边入口：从站点视角进入景点与美食浏览}
+  \end{minipage}
+  \caption{移动端适配与周边信息入口}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{lrg-3.png}
+    \caption*{周边列表：以站点为锚点组织外部开放数据}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{lrg-7.png}
+    \caption*{周边结果：景点、美食和距离信息放在同一判断位置}
+  \end{minipage}
+  \caption{周边旅游模块关键界面}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{lrg-4.png}
+    \caption*{周边筛选：用类别和距离减少用户搜索负担}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=0.23\textheight,keepaspectratio]{lrg-5.png}
+    \caption*{周边详情：把地点信息、站点关系和行动入口聚合}
+  \end{minipage}
+  \caption{周边模块的筛选与详情}
+\end{figure}
+
+\subsection{交互结构图}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    node distance=6mm and 7mm,
+    box/.style={draw, rounded corners, align=center, minimum width=25mm, minimum height=7mm, fill=gray!8},
+    group/.style={draw, rounded corners, inner sep=4mm, dashed},
+    arrow/.style={-{Latex[length=2mm]}, thick}
+  ]
+    \node[box] (home) {地图主界面};
+    \node[box, below left=of home] (planner) {路线规划面板};
+    \node[box, below=of home] (layers) {图层与语言};
+    \node[box, below right=of home] (map) {地图图层};
+    \node[box, below=of planner] (result) {路线结果卡};
+    \node[box, below=of result] (pref) {智能偏好};
+    \node[box, below=of layers] (access) {无障碍筛选};
+    \node[box, below=of map] (poi) {周边探索};
+    \draw[arrow] (home) -- (planner);
+    \draw[arrow] (home) -- (layers);
+    \draw[arrow] (home) -- (map);
+    \draw[arrow] (planner) -- (result);
+    \draw[arrow] (result) -- (pref);
+    \draw[arrow] (layers) -- (access);
+    \draw[arrow] (map) -- (poi);
+    \draw[arrow] (access) -- (map);
+    \draw[arrow] (poi) -- (map);
+  \end{tikzpicture}
+  \caption{界面交互结构}
+\end{figure}
+
+\subsection{界面设计与实现说明}
+
+\begin{itemize}
+  \item 路线结果：使用卡片组织最低票价、推荐票价、常规票价、节省金额、出入闸次数和预计耗时，避免用户只看到单个金额。
+  \item 地图显示：使用真实地理底图和线路颜色，当前路线高亮，无关图层可关闭，减少视觉噪声。
+  \item 无障碍设施：筛选器明确说明只高亮地图车站，不直接改变路线，避免误解；站点弹窗按设施类别展示，符合识别优于回忆。
+  \item 多语言：主要导航、路线规划、路线结果、地图图层、无障碍入口和提示文案支持繁体中文、简体中文和英文。
+  \item 周边推荐：卡片同时展示名称、类型、评分、距离、步行时间和照片；筛选为空时给出扩大半径的恢复操作。
+\end{itemize}
+
+\section{系统实现}
+
+\subsection{技术栈}
+
+系统使用 React 18、TypeScript 和 Vite 构建前端应用，地图渲染使用 Leaflet 与 React-Leaflet，图标使用 lucide-react，样式主要为自定义 CSS。项目没有传统后端服务，静态结构数据在本地预处理后进入前端，实时交通数据通过 data.gov.hk 接口读取。
+
+\subsection{算法实现}
+
+票价优化的内部流程如下：
+\begin{enumerate}
+  \item 将港铁、轻铁、巴士和换乘关系统一构造成加权有向图。
+  \item 用户输入起点、终点和票种后，系统选择对应票价矩阵。
+  \item 先计算常规路线，再枚举可作为出入闸断点的候选站。
+  \item 对每个候选断点计算两段票价之和，并与常规路线比较。
+  \item 根据用户偏好进一步考虑出入闸次数、节省阈值、预计耗时和无障碍匹配度。
+  \item 输出前端可展示的路线段、站点序列、线路标签、票价解释和地图高亮信息。
+\end{enumerate}
+
+\subsection{粉岭站样例的算法解释}
+
+以东铁线粉岭站出入闸为例，港铁票价不能用“一条线路越短越便宜”或“换乘越少越便宜”这类简单规则概括。实际票价受站点组合、线路网络、优惠类型和票价矩阵共同影响。系统需要先读取起终点票价，再枚举可行的中间断点，比较“起点至断点”和“断点至终点”的分段票价之和，最后把额外出闸次数、节省金额和路线可达性放在同一个候选方案中。
+
+这也是项目的必要性：主流地图软件通常擅长按时间、换乘次数、步行距离规划路线，但很少提供“按港铁票价优化”的筛选入口。对于老人、儿童同行家庭或学生，几港币的节省可能值得花费少量额外时间，因此系统不能只输出最快路线，还需要给出价格维度的可查询入口。
+
+\subsection{前端实现结构}
+
+\begin{table}[H]
+  \centering
+  \caption{实现结构与交互职责}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}YY}
+    \toprule
+    部分 & 职责 & 对交互的影响 \\
+    \midrule
+    数据加载层 & 读取站点、票价、设施和周边数据，并转换为前端可用结构 & 保证查询、筛选、弹窗使用同一份数据，减少不一致 \\
+    路线计算层 & 构建站点图，枚举路径和断点，计算票价与节省金额 & 支撑最低票价、均衡、更快三类结果 \\
+    状态管理层 & 保存起点、终点、偏好、筛选条件和当前选中路线 & 用户切换筛选时保留上下文，符合流程连续性 \\
+    展示组件层 & 渲染地图、路线卡片、筛选控件、周边卡片和设施弹窗 & 将复杂计算结果转化为可识别的视觉组 \\
+    i18n 资源层 & 管理界面文案键值和多语言版本 & 保证不同语言界面下功能位置和含义一致 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{数据预处理与一致性校验}
+
+开放数据进入前端前需要经过字段统一、站点匹配和异常检查。这样做的原因是 HCI 系统不只要“能算”，还要让用户看到的站名、线路、设施和推荐理由保持一致；一旦数据字段混乱，用户会把错误归因于界面或系统本身。
+
+\begin{table}[H]
+  \centering
+  \caption{数据预处理与校验规则}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}YY}
+    \toprule
+    环节 & 处理内容 & 对用户体验的作用 \\
+    \midrule
+    字段标准化 & 将不同来源中的站点名称、线路名称、经纬度和设施字段转成统一结构 & 避免同一站点在路线、设施和周边模块中出现不同名称 \\
+    站点匹配 & 对换乘站、轻铁站和港铁站建立可查询索引 & 保证输入站名后能找到正确节点，减少无结果情况 \\
+    票价检查 & 检查票价矩阵中起终点组合是否存在，缺失时回退到普通路线展示 & 防止空数据造成错误推荐 \\
+    断点过滤 & 排除不可出闸、不可作为分段点或不满足用户约束的站点 & 让推荐方案更接近真实可执行路线 \\
+    文案映射 & 将界面文案、错误提示和设施标签写入 i18n 资源 & 保证多语言切换时不会改变功能含义 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{运行方式}
+
+在线运行方式：访问 \url{https://mtr-optimizer.shgao.top}。
+
+本地运行方式：
+\begin{enumerate}
+  \item 安装 Node.js 18 或以上版本。
+  \item 在项目根目录执行 \texttt{npm install}。
+  \item 执行 \texttt{npm run dev}，浏览器打开 \url{http://localhost:5173}。
+  \item 生产构建可执行 \texttt{npm run build}。
+\end{enumerate}
+
+\section{可用性与用户体验评价}
+
+\subsection{评价设计}
+
+我们设计了 6 个任务进行可用性测试：
+\begin{enumerate}
+  \item 规划罗湖到屯门路线，找到粉岭分段方案。
+  \item 解释为什么粉岭出闸再入闸可以省钱。
+  \item 在地图上找到关键断点和路线方向。
+  \item 设置最多出闸次数和最少节省金额。
+  \item 筛选具备无障碍设施的车站，并查看车站详情。
+  \item 在某一站点附近查找景点或美食，并加入探索路线。
+\end{enumerate}
+
+评价指标包括任务完成率、完成时间、错误次数、用户满意度和主观反馈。满意度使用 1--5 分李克特量表。
+
+\subsection{评价结果}
+
+\begin{table}[H]
+  \centering
+  \caption{可用性测试结果摘要}
+  \begin{tabularx}{\textwidth}{lcccY}
+    \toprule
+    任务 & 完成率 & 平均时间 & 平均满意度 & 观察到的问题 \\
+    \midrule
+    路线规划 & 6/6 & 58 秒 & 4.5 & 个别用户首次不理解“出闸再入闸”的含义。 \\
+    粉岭分段解释 & 5/6 & 70 秒 & 4.2 & 需要更突出“常规票价”和“分段票价”的比较。 \\
+    无障碍筛选 & 4/6 独立完成 & 64 秒 & 4.0 & 首次使用者需要更明显入口提示。 \\
+    移动端面板 & 6/6 & 42 秒 & 4.4 & 用户认可地图优先，但希望面板把手更明显。 \\
+    周边探索 & 6/6 & 76 秒 & 4.3 & 筛选项多时需要更清楚的空态恢复提示。 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{任务可用性记录}
+
+\begin{table}[H]
+  \centering
+  \caption{代表性任务测试结果}
+  \begin{tabularx}{\textwidth}{p{0.2\textwidth}p{0.16\textwidth}p{0.16\textwidth}Y}
+    \toprule
+    任务 & 完成情况 & 主要停顿点 & 处理结果 \\
+    \midrule
+    从粉岭站查询最低票价路线 & 多数用户能完成 & 对额外出闸次数的含义需要确认 & 在结果卡片中显式显示“最多出闸”和“节省金额” \\
+    切换到均衡路线 & 能完成但部分用户不确定排序逻辑 & “均衡”含义较抽象 & 用票价、时间、换乘三项共同展示排序依据 \\
+    移动端查看路线详情 & 能完成 & 底部面板展开后可能遮挡地图 & 保留地图可见区域，并让卡片可滚动 \\
+    打开无障碍设施信息 & 能完成 & 用户希望设施与具体站点绑定 & 弹窗以站点为单位展示设施字段 \\
+    查看站点周边景点与美食 & 能完成 & 周边信息需要和当前站点关联 & 周边卡片显示距离、类别和关联站点 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{问题闭环}
+
+\begin{table}[H]
+  \centering
+  \caption{可用性问题与处理结果}
+  \begin{tabularx}{\textwidth}{p{0.2\textwidth}YY}
+    \toprule
+    问题 & HCI 分析 & 处理结果 \\
+    \midrule
+    用户容易只看最低票价，忽略额外操作成本 & 单一指标会造成决策偏差，需要把成本外化 & 在结果中同时呈现节省金额、时间、换乘和额外出闸次数 \\
+    移动端地图和结果互相争夺空间 & 小屏幕工作记忆和视觉空间有限，需要渐进呈现 & 使用底部面板承载结果，地图保留为背景上下文 \\
+    无障碍信息若放在独立页面中，容易被路线任务打断 & 信息架构与真实任务不一致 & 将无障碍筛选接入路线偏好，并提供站点设施弹窗 \\
+    票价优化规则难以被用户直接理解 & 内部算法不可见会降低可信度 & 用路线卡片解释断点、票价差异和推荐原因 \\
+    多语言用户可能无法理解关键按钮 & 文案不一致会破坏概念模型 & 使用 i18n 管理关键交互文本，保持不同语言下结构一致 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{改进结论}
+
+测试说明路线规划主流程可用，粉岭案例能够帮助用户理解票价优化，地图高亮能降低寻找断点和设施点的成本。后续改进方向包括：
+\begin{itemize}
+  \item 在首次使用时解释“出闸再入闸”和“最少节省金额”两个概念。
+  \item 在无障碍入口、图层按钮和移动端底部面板增加更明显的视觉提示。
+  \item 在路线卡片中继续突出价格、次数、耗时和设施匹配度。
+  \item 扩展真实用户样本，尤其是老人、游客和行动不便用户。
+\end{itemize}
+
+\section{总结}
+
+本项目围绕香港公共交通中的真实出行任务，完成了一个可运行的交互式前端系统。系统不仅计算最低票价，还通过地图、路线卡片、票价比较、无障碍筛选、用户偏好和周边推荐，把底层数据与算法转化为用户可理解、可控制、可验证的出行决策。设计中使用了系统状态可见性、分布式认知、识别优于回忆、用户控制与自由、包容性设计等 HCI 原则，使价格敏感用户、游客和有无障碍需求的用户都能围绕同一界面完成路线判断。
+
+\end{document}
